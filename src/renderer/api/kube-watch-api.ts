@@ -1,7 +1,7 @@
 // Kubernetes watch-api consumer
 
 import { computed, observable, reaction } from "mobx";
-import { stringify } from "querystring"
+import { stringify } from "querystring";
 import { autobind, EventEmitter } from "../utils";
 import { KubeJsonApiData } from "./kube-json-api";
 import type { KubeObjectStore } from "../kube-object.store";
@@ -61,13 +61,13 @@ export class KubeWatchApi {
   }
 
   protected getQuery(): Partial<IKubeWatchRouteQuery> {
-    const { isAdmin, allowedNamespaces } = getHostedCluster()
+    const { isAdmin, allowedNamespaces } = getHostedCluster();
     return {
       api: this.activeApis.map(api => {
         if (isAdmin) return api.getWatchUrl();
-        return allowedNamespaces.map(namespace => api.getWatchUrl(namespace))
+        return allowedNamespaces.map(namespace => api.getWatchUrl(namespace));
       }).flat()
-    }
+    };
   }
 
   // todo: maybe switch to websocket to avoid often reconnects
@@ -109,17 +109,22 @@ export class KubeWatchApi {
     }
   }
 
-  protected async onRouteEvent({ type, url }: IKubeWatchRouteEvent) {
-    if (type === "STREAM_END") {
+  protected async onRouteEvent(event: IKubeWatchRouteEvent) {
+    if (event.type === "STREAM_END") {
       this.disconnect();
-      const { apiBase, namespace } = KubeApi.parseApi(url);
+      const { apiBase, namespace } = KubeApi.parseApi(event.url);
       const api = apiManager.getApi(apiBase);
       if (api) {
         try {
           await api.refreshResourceVersion({ namespace });
           this.reconnect();
         } catch (error) {
-          console.debug("failed to refresh resource version", error)
+          console.error("failed to refresh resource version", error);
+          if (this.subscribers.size > 0) {
+            setTimeout(() => {
+              this.onRouteEvent(event);
+            }, 1000);
+          }
         }
       }
     }

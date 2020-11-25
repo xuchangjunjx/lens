@@ -1,18 +1,18 @@
-import "./item-list-layout.scss"
-import groupBy from "lodash/groupBy"
+import "./item-list-layout.scss";
+import groupBy from "lodash/groupBy";
 
 import React, { ReactNode } from "react";
 import { computed, observable, reaction, toJS, when } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { Plural, Trans } from "@lingui/macro";
-import { ConfirmDialog, IConfirmDialogParams } from "../confirm-dialog";
-import { SortingCallback, Table, TableCell, TableCellProps, TableHead, TableProps, TableRow, TableRowProps } from "../table";
+import { ConfirmDialog, ConfirmDialogParams } from "../confirm-dialog";
+import { TableSortCallback, Table, TableCell, TableCellProps, TableHead, TableProps, TableRow, TableRowProps } from "../table";
 import { autobind, createStorage, cssNames, IClassName, isReactNode, noop, prevDefault, stopPropagation } from "../../utils";
 import { AddRemoveButtons, AddRemoveButtonsProps } from "../add-remove-buttons";
 import { NoItems } from "../no-items";
 import { Spinner } from "../spinner";
 import { ItemObject, ItemStore } from "../../item.store";
-import { SearchInput } from "../input";
+import { SearchInputUrl } from "../input";
 import { namespaceStore } from "../+namespaces/namespace.store";
 import { Filter, FilterType, pageFilters } from "./page-filters.store";
 import { PageFiltersList } from "./page-filters-list";
@@ -52,7 +52,7 @@ export interface ItemListLayoutProps<T extends ItemObject = ItemObject> {
   isSelectable?: boolean; // show checkbox in rows for selecting items
   isSearchable?: boolean; // apply search-filter & add search-input
   copyClassNameFromHeadCells?: boolean;
-  sortingCallbacks?: { [sortBy: string]: SortingCallback };
+  sortingCallbacks?: { [sortBy: string]: TableSortCallback };
   tableProps?: Partial<TableProps>; // low-level table configuration
   renderTableHeader: TableCellProps[] | null;
   renderTableContents: (item: T) => (ReactNode | TableCellProps)[];
@@ -67,7 +67,7 @@ export interface ItemListLayoutProps<T extends ItemObject = ItemObject> {
   onDetails?: (item: T) => void;
 
   // other
-  customizeRemoveDialog?: (selectedItems: T[]) => Partial<IConfirmDialogParams>;
+  customizeRemoveDialog?: (selectedItems: T[]) => Partial<ConfirmDialogParams>;
   renderFooter?: (parent: ItemListLayout) => React.ReactNode;
 }
 
@@ -120,7 +120,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       await when(() => this.isUnmounting);
       subscriptions.forEach(dispose => dispose()); // unsubscribe all
     } catch (error) {
-      console.log("catched", error)
+      console.log("catched", error);
     }
   }
 
@@ -141,7 +141,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
           return searchFilters.some(getTexts => {
             const sourceTexts: string[] = [getTexts(item)].flat().map(normalizeText);
             return sourceTexts.some(source => searchTexts.some(search => source.includes(search)));
-          })
+          });
         });
       }
       return items;
@@ -150,11 +150,11 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     [FilterType.NAMESPACE]: items => {
       const filterValues = pageFilters.getValues(FilterType.NAMESPACE);
       if (filterValues.length > 0) {
-        return items.filter(item => filterValues.includes(item.getNs()))
+        return items.filter(item => filterValues.includes(item.getNs()));
       }
       return items;
     },
-  }
+  };
 
   @computed get isReady() {
     const { isReady, store } = this.props;
@@ -235,7 +235,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
                   cellProps.className = cssNames(cellProps.className, headCell.className);
                 }
               }
-              return <TableCell key={index} {...cellProps}/>
+              return <TableCell key={index} {...cellProps} />;
             })
         }
         {renderItemMenu && (
@@ -268,7 +268,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
         />
       ),
       ...dialogCustomProps,
-    })
+    });
   }
 
   renderFilters() {
@@ -277,7 +277,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     if (!isReady || !filters.length || hideFilters || !userSettings.showAppliedFilters) {
       return;
     }
-    return <PageFiltersList filters={filters}/>
+    return <PageFiltersList filters={filters} />;
   }
 
   renderNoItems() {
@@ -295,9 +295,9 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
             </a>
           </p>
         </NoItems>
-      )
+      );
     }
-    return <NoItems/>
+    return <NoItems />;
   }
 
   renderHeaderContent(placeholders: IHeaderPlaceholders): ReactNode {
@@ -311,7 +311,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
         {filters}
         {search}
       </>
-    )
+    );
   }
 
   renderInfo() {
@@ -325,7 +325,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
         <Trans>
           <a onClick={toggleFilters}>Filtered</a>: {itemsCount} / {allItemsCount}
         </Trans>
-      )
+      );
     }
     return (
       <Plural
@@ -344,13 +344,13 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       title: <h5 className="title">{title}</h5>,
       info: this.renderInfo(),
       filters: <>
-        {!isClusterScoped && <NamespaceSelectFilter/>}
+        {!isClusterScoped && <NamespaceSelectFilter />}
         <PageFiltersSelect allowEmpty disableFilters={{
           [FilterType.NAMESPACE]: true, // namespace-select used instead
-        }}/>
+        }} />
       </>,
-      search: <SearchInput/>,
-    }
+      search: <SearchInputUrl />,
+    };
     let header = this.renderHeaderContent(placeholders);
     if (customizeHeader) {
       const modifiedHeader = customizeHeader(placeholders, header);
@@ -367,7 +367,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       <div className={cssNames("header flex gaps align-center", headerClassName)}>
         {header}
       </div>
-    )
+    );
   }
 
   renderList() {
@@ -381,7 +381,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     return (
       <div className="items box grow flex column">
         {!isReady && (
-          <Spinner center/>
+          <Spinner center />
         )}
         {isReady && (
           <Table
@@ -406,8 +406,8 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
                     onClick={prevDefault(() => store.toggleSelectionAll(items))}
                   />
                 )}
-                {renderTableHeader.map((cellProps, index) => <TableCell key={index} {...cellProps}/>)}
-                {renderItemMenu && <TableCell className="menu"/>}
+                {renderTableHeader.map((cellProps, index) => <TableCell key={index} {...cellProps} />)}
+                {renderItemMenu && <TableCell className="menu" />}
               </TableHead>
             )}
             {
@@ -421,7 +421,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
           {...addRemoveButtons}
         />
       </div>
-    )
+    );
   }
 
   renderFooter() {

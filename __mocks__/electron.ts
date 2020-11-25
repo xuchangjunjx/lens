@@ -5,7 +5,7 @@ module.exports = {
     getVersion: jest.fn().mockReturnValue("3.0.0"),
     getLocale: jest.fn().mockRejectedValue("en"),
     getPath: jest.fn((name: string) => {
-      return "tmp"
+      return "tmp";
     }),
   },
   remote: {
@@ -13,5 +13,8 @@ module.exports = {
       getPath: jest.fn()
     }
   },
-  dialog: jest.fn()
+  dialog: jest.fn(),
+  ipcRenderer: {
+    on: jest.fn()
+  }
 };

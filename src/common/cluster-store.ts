@@ -1,15 +1,17 @@
+import { workspaceStore } from "./workspace-store";
 import path from "path";
-import { app, ipcRenderer, remote, webFrame, webContents } from "electron";
+import { app, ipcRenderer, remote, webFrame } from "electron";
 import { unlink } from "fs-extra";
-import { action, computed, observable, toJS } from "mobx";
+import { action, computed, observable, reaction, toJS } from "mobx";
 import { BaseStore } from "./base-store";
 import { Cluster, ClusterState } from "../main/cluster";
-import migrations from "../migrations/cluster-store"
+import migrations from "../migrations/cluster-store";
 import logger from "../main/logger";
-import { tracker } from "./tracker";
+import { appEventBus } from "./event-bus";
 import { dumpConfigYaml } from "./kube-helpers";
 import { saveToAppFiles } from "./utils/saveToAppFiles";
 import { KubeConfig } from "@kubernetes/client-node";
+import { subscribeToBroadcast, unsubscribeAllFromBroadcast } from "./ipc";
 import _ from "lodash";
 import move from "array-move";
 import type { WorkspaceId } from "./workspace-store";
@@ -18,6 +20,10 @@ export interface ClusterIconUpload {
   clusterId: string;
   name: string;
   path: string;
+}
+
+export interface ClusterMetadata {
+  [key: string]: string | number | boolean;
 }
 
 export interface ClusterStoreModel {
@@ -29,10 +35,13 @@ export type ClusterId = string;
 
 export interface ClusterModel {
   id: ClusterId;
+  kubeConfigPath: string;
   workspace?: WorkspaceId;
   contextName?: string;
   preferences?: ClusterPreferences;
-  kubeConfigPath: string;
+  metadata?: ClusterMetadata;
+  ownerRef?: string;
+  accessibleNamespaces?: string[];
 
   /** @deprecated */
   kubeConfig?: string; // yaml
@@ -67,55 +76,83 @@ export class ClusterStore extends BaseStore<ClusterStoreModel> {
     return filePath;
   }
 
+  @observable activeCluster: ClusterId;
+  @observable removedClusters = observable.map<ClusterId, Cluster>();
+  @observable clusters = observable.map<ClusterId, Cluster>();
+
   private constructor() {
     super({
       configName: "lens-cluster-store",
       accessPropertiesByDotNotation: false, // To make dots safe in cluster context names
-      migrations: migrations,
+      migrations,
+    });
+
+    this.pushStateToViewsAutomatically();
+  }
+
+  protected pushStateToViewsAutomatically() {
+    if (!ipcRenderer) {
+      reaction(() => this.connectedClustersList, () => {
+        this.pushState();
+      });
+    }
+  }
+
+  registerIpcListener() {
+    logger.info(`[CLUSTER-STORE] start to listen (${webFrame.routingId})`);
+    subscribeToBroadcast("cluster:state", (event, clusterId: string, state: ClusterState) => {
+      logger.silly(`[CLUSTER-STORE]: received push-state at ${location.host} (${webFrame.routingId})`, clusterId, state);
+      this.getById(clusterId)?.setState(state);
     });
   }
 
-  @observable activeClusterId: ClusterId;
-  @observable removedClusters = observable.map<ClusterId, Cluster>();
-  @observable clusters = observable.map<ClusterId, Cluster>();
-
-  registerIpcListener() {
-    logger.info(`[CLUSTER-STORE] start to listen (${webFrame.routingId})`)
-    ipcRenderer.on("cluster:state", (event, model: ClusterState) => {
-      this.applyWithoutSync(() => {
-        logger.silly(`[CLUSTER-STORE]: received push-state at ${location.host} (${webFrame.routingId})`, model);
-        this.getById(model.id)?.updateModel(model);
-      })
-    })
-  }
-
   unregisterIpcListener() {
-    super.unregisterIpcListener()
-    ipcRenderer.removeAllListeners("cluster:state")
+    super.unregisterIpcListener();
+    unsubscribeAllFromBroadcast("cluster:state");
   }
 
-  @computed get activeCluster(): Cluster | null {
-    return this.getById(this.activeClusterId);
+  pushState() {
+    this.clusters.forEach((c) => {
+      c.pushState();
+    });
+  }
+
+  get activeClusterId() {
+    return this.activeCluster;
   }
 
   @computed get clustersList(): Cluster[] {
     return Array.from(this.clusters.values());
   }
 
+  @computed get enabledClustersList(): Cluster[] {
+    return this.clustersList.filter((c) => c.enabled);
+  }
+
+  @computed get active(): Cluster | null {
+    return this.getById(this.activeCluster);
+  }
+
+  @computed get connectedClustersList(): Cluster[] {
+    return this.clustersList.filter((c) => !c.disconnected);
+  }
+
   isActive(id: ClusterId) {
-    return this.activeClusterId === id;
+    return this.activeCluster === id;
   }
 
   @action
   setActive(id: ClusterId) {
-    this.activeClusterId = id;
+    const clusterId = this.clusters.has(id) ? id : null;
+    this.activeCluster = clusterId;
+    workspaceStore.setLastActiveClusterId(clusterId);
   }
 
   @action
   swapIconOrders(workspace: WorkspaceId, from: number, to: number) {
     const clusters = this.getByWorkspaceId(workspace);
     if (from < 0 || to < 0 || from >= clusters.length || to >= clusters.length || isNaN(from) || isNaN(to)) {
-      throw new Error(`invalid from<->to arguments`)
+      throw new Error(`invalid from<->to arguments`);
     }
 
     move.mutate(clusters, from, to);
@@ -136,26 +173,42 @@ export class ClusterStore extends BaseStore<ClusterStoreModel> {
   getByWorkspaceId(workspaceId: string): Cluster[] {
     const clusters = Array.from(this.clusters.values())
       .filter(cluster => cluster.workspace === workspaceId);
-    return _.sortBy(clusters, cluster => cluster.preferences.iconOrder)
+    return _.sortBy(clusters, cluster => cluster.preferences.iconOrder);
   }
 
   @action
-  addCluster(...models: ClusterModel[]) {
+  addClusters(...models: ClusterModel[]): Cluster[] {
+    const clusters: Cluster[] = [];
     models.forEach(model => {
-      tracker.event("cluster", "add");
-      const cluster = new Cluster(model);
-      this.clusters.set(model.id, cluster);
-    })
+      clusters.push(this.addCluster(model));
+    });
+
+    return clusters;
+  }
+
+  @action
+  addCluster(model: ClusterModel | Cluster): Cluster {
+    appEventBus.emit({ name: "cluster", action: "add" });
+    let cluster = model as Cluster;
+    if (!(model instanceof Cluster)) {
+      cluster = new Cluster(model);
+    }
+    this.clusters.set(model.id, cluster);
+    return cluster;
+  }
+
+  async removeCluster(model: ClusterModel) {
+    await this.removeById(model.id);
   }
 
   @action
   async removeById(clusterId: ClusterId) {
-    tracker.event("cluster", "remove");
+    appEventBus.emit({ name: "cluster", action: "remove" });
     const cluster = this.getById(clusterId);
     if (cluster) {
       this.clusters.delete(clusterId);
-      if (this.activeClusterId === clusterId) {
-        this.activeClusterId = null;
+      if (this.activeCluster === clusterId) {
+        this.setActive(null);
       }
       // remove only custom kubeconfigs (pasted as text)
       if (cluster.kubeConfigPath == ClusterStore.getCustomKubeConfigPath(clusterId)) {
@@ -167,8 +220,8 @@ export class ClusterStore extends BaseStore<ClusterStoreModel> {
   @action
   removeByWorkspaceId(workspaceId: string) {
     this.getByWorkspaceId(workspaceId).forEach(cluster => {
-      this.removeById(cluster.id)
-    })
+      this.removeById(cluster.id);
+    });
   }
 
   @action
@@ -184,6 +237,9 @@ export class ClusterStore extends BaseStore<ClusterStoreModel> {
         cluster.updateModel(clusterModel);
       } else {
         cluster = new Cluster(clusterModel);
+        if (!cluster.isManaged) {
+          cluster.enabled = true;
+        }
       }
       newClusters.set(clusterModel.id, cluster);
     }
@@ -195,18 +251,18 @@ export class ClusterStore extends BaseStore<ClusterStoreModel> {
       }
     });
 
-    this.activeClusterId = newClusters.has(activeCluster) ? activeCluster : null;
+    this.activeCluster = newClusters.has(activeCluster) ? activeCluster : null;
     this.clusters.replace(newClusters);
     this.removedClusters.replace(removedClusters);
   }
 
   toJSON(): ClusterStoreModel {
     return toJS({
-      activeCluster: this.activeClusterId,
+      activeCluster: this.activeCluster,
       clusters: this.clustersList.map(cluster => cluster.toJSON()),
     }, {
       recurseEverything: true
-    })
+    });
   }
 }
 

@@ -1,4 +1,4 @@
-import { appName, htmlTemplate, isDevelopment, isProduction, buildDir, rendererDir, sassCommonVars, publicPath } from "./src/common/vars";
+import { appName, buildDir, htmlTemplate, isDevelopment, isProduction, publicPath, rendererDir, sassCommonVars, webpackDevServerPort } from "./src/common/vars";
 import path from "path";
 import webpack from "webpack";
 import HtmlWebpackPlugin from "html-webpack-plugin";
@@ -6,23 +6,48 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import TerserPlugin from "terser-webpack-plugin";
 import ForkTsCheckerPlugin from "fork-ts-checker-webpack-plugin"
 import ProgressBarPlugin from "progress-bar-webpack-plugin";
+import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin'
 
-export default function (): webpack.Configuration {
-  console.info('WEBPACK:renderer', require("./src/common/vars"))
+export default [
+  webpackLensRenderer
+]
+
+export function webpackLensRenderer({ showVars = true } = {}): webpack.Configuration {
+  if (showVars) {
+    console.info('WEBPACK:renderer', require("./src/common/vars"));
+  }
   return {
     context: __dirname,
     target: "electron-renderer",
     devtool: "source-map", // todo: optimize in dev-mode with webpack.SourceMapDevToolPlugin
+    devServer: {
+      contentBase: buildDir,
+      port: webpackDevServerPort,
+      host: "localhost",
+      hot: true,
+      // to avoid cors errors when requests is from iframes
+      disableHostCheck: true,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    },
+    name: "lens-app",
     mode: isProduction ? "production" : "development",
     cache: isDevelopment,
     entry: {
       [appName]: path.resolve(rendererDir, "bootstrap.tsx"),
     },
     output: {
+      libraryTarget: "global",
+      library: "",
+      globalObject: "this",
       publicPath: publicPath,
       path: buildDir,
       filename: '[name].js',
       chunkFilename: 'chunks/[name].js',
+    },
+    stats: {
+      warningsFilter: [
+        /Critical dependency: the request of a dependency is an expression/
+      ]
     },
     resolve: {
       extensions: [
@@ -64,7 +89,10 @@ export default function (): webpack.Configuration {
                   ["@babel/preset-env", {
                     modules: "commonjs" // ling-ui
                   }],
-                ]
+                ],
+                plugins: [
+                  isDevelopment && require.resolve('react-refresh/babel'),
+                ].filter(Boolean),
               }
             },
             {
@@ -157,6 +185,10 @@ export default function (): webpack.Configuration {
       new MiniCssExtractPlugin({
         filename: "[name].css",
       }),
-    ],
+
+      isDevelopment && new webpack.HotModuleReplacementPlugin(),
+      isDevelopment && new ReactRefreshWebpackPlugin(),
+
+    ].filter(Boolean),
   }
 }

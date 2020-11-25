@@ -1,4 +1,4 @@
-import "./volume-claim-details.scss"
+import "./volume-claim-details.scss";
 
 import React, { Fragment } from "react";
 import { reaction } from "mobx";
@@ -14,10 +14,10 @@ import { getDetailsUrl } from "../../navigation";
 import { ResourceMetrics } from "../resource-metrics";
 import { VolumeClaimDiskChart } from "./volume-claim-disk-chart";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { PersistentVolumeClaim, pvcApi } from "../../api/endpoints";
+import { PersistentVolumeClaim } from "../../api/endpoints";
 import { _i18n } from "../../i18n";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<PersistentVolumeClaim> {
 }
@@ -88,13 +88,24 @@ export class PersistentVolumeClaimDetails extends React.Component<Props> {
             </Fragment>
           ))}
         </DrawerItem>
-
-        <KubeEventDetails object={volumeClaim}/>
       </div>
     );
   }
 }
 
-apiManager.registerViews(pvcApi, {
-  Details: PersistentVolumeClaimDetails,
-})
+kubeObjectDetailRegistry.add({
+  kind: "PersistentVolumeClaim",
+  apiVersions: ["v1"],
+  components: {
+    Details: (props) => <PersistentVolumeClaimDetails {...props} />
+  }
+});
+
+kubeObjectDetailRegistry.add({
+  kind: "PersistentVolumeClaim",
+  apiVersions: ["v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});

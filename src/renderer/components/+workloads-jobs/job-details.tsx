@@ -15,11 +15,11 @@ import { podsStore } from "../+workloads-pods/pods.store";
 import { jobStore } from "./job.store";
 import { getDetailsUrl } from "../../navigation";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { Job, jobApi } from "../../api/endpoints";
+import { Job } from "../../api/endpoints";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
 import { lookupApiLink } from "../../api/kube-api";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<Job> {
 }
@@ -35,12 +35,12 @@ export class JobDetails extends React.Component<Props> {
   render() {
     const { object: job } = this.props;
     if (!job) return null;
-    const selectors = job.getSelectors()
-    const nodeSelector = job.getNodeSelectors()
-    const images = job.getImages()
-    const childPods = jobStore.getChildPods(job)
-    const ownerRefs = job.getOwnerRefs()
-    const condition = job.getCondition()
+    const selectors = job.getSelectors();
+    const nodeSelector = job.getNodeSelectors();
+    const images = job.getImages();
+    const childPods = jobStore.getChildPods(job);
+    const ownerRefs = job.getOwnerRefs();
+    const condition = job.getCondition();
     return (
       <div className="JobDetails">
         <KubeObjectMeta object={job}/>
@@ -70,7 +70,7 @@ export class JobDetails extends React.Component<Props> {
           {
             ownerRefs.map(ref => {
               const { name, kind } = ref;
-              const detailsUrl = getDetailsUrl(lookupApiLink(ref, job))
+              const detailsUrl = getDetailsUrl(lookupApiLink(ref, job));
               return (
                 <p key={name}>
                   {kind} <Link to={detailsUrl}>{name}</Link>
@@ -101,12 +101,23 @@ export class JobDetails extends React.Component<Props> {
           <PodDetailsStatuses pods={childPods}/>
         </DrawerItem>
         <PodDetailsList pods={childPods} owner={job}/>
-        <KubeEventDetails object={job}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(jobApi, {
-  Details: JobDetails
+kubeObjectDetailRegistry.add({
+  kind: "Job",
+  apiVersions: ["batch/v1"],
+  components: {
+    Details: (props: any) => <JobDetails {...props}/>
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "Job",
+  apiVersions: ["batch/v1"],
+  priority: 5,
+  components: {
+    Details: (props: any) => <KubeEventDetails {...props}/>
+  }
 });

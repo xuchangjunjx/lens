@@ -5,7 +5,7 @@ import uniqueId from "lodash/uniqueId";
 
 // todo: refactor with contexts
 
-interface RadioGroupProps {
+export interface RadioGroupProps {
   className?: any;
   value?: any;
   asButtons?: boolean;
@@ -24,25 +24,25 @@ export class RadioGroup extends React.Component<RadioGroupProps, {}> {
       <div className={className}>
         {radios.map(radio => {
           return React.cloneElement(radio, {
-            name: name,
+            name,
             disabled: disabled !== undefined ? disabled : radio.props.disabled,
             checked: radio.props.value === value,
-            onChange: onChange
-          } as any)
+            onChange
+          } as any);
         })}
       </div>
     );
   }
 }
 
-type RadioProps = React.HTMLProps<any> & {
+export type RadioProps = React.HTMLProps<any> & {
   name?: string;
   label?: React.ReactNode | any;
   value?: any;
   checked?: boolean;
   disabled?: boolean;
   onChange?(value: React.ChangeEvent<HTMLInputElement>): void;
-}
+};
 
 export class Radio extends React.Component<RadioProps> {
   private elem: HTMLElement;
@@ -52,7 +52,7 @@ export class Radio extends React.Component<RadioProps> {
     if (!checked && onChange) {
       onChange(value);
     }
-  }
+  };
 
   onKeyDown = (e: React.KeyboardEvent<any>) => {
     const SPACE_KEY = e.keyCode === 32;
@@ -61,12 +61,12 @@ export class Radio extends React.Component<RadioProps> {
       this.elem.click();
       e.preventDefault();
     }
-  }
+  };
 
   render() {
     const { className, label, checked, children, ...inputProps } = this.props;
     const componentClass = cssNames('Radio flex align-center', className, {
-      checked: checked,
+      checked,
       disabled: this.props.disabled,
     });
     return (

@@ -12,9 +12,9 @@ import { KubeEventDetails } from "../+events/kube-event-details";
 import { cronJobStore } from "./cronjob.store";
 import { getDetailsUrl } from "../../navigation";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { CronJob, cronJobApi, Job } from "../../api/endpoints";
-import { apiManager } from "../../api/api-manager";
+import { CronJob, Job } from "../../api/endpoints";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<CronJob> {
 }
@@ -30,7 +30,7 @@ export class CronJobDetails extends React.Component<Props> {
   render() {
     const { object: cronJob } = this.props;
     if (!cronJob) return null;
-    const childJobs = jobStore.getJobsByOwner(cronJob)
+    const childJobs = jobStore.getJobsByOwner(cronJob);
     return (
       <div className="CronJobDetails">
         <KubeObjectMeta object={cronJob}/>
@@ -54,8 +54,8 @@ export class CronJobDetails extends React.Component<Props> {
           <>
             <DrawerTitle title={<Trans>Jobs</Trans>}/>
             {childJobs.map((job: Job) => {
-              const selectors = job.getSelectors()
-              const condition = job.getCondition()
+              const selectors = job.getSelectors();
+              const condition = job.getCondition();
               return (
                 <div className="job" key={job.getId()}>
                   <div className="title">
@@ -77,16 +77,27 @@ export class CronJobDetails extends React.Component<Props> {
                     }
                   </DrawerItem>
                 </div>
-              )})
+              );})
             }
           </>
         }
-        <KubeEventDetails object={cronJob}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(cronJobApi, {
-  Details: CronJobDetails,
-})
+kubeObjectDetailRegistry.add({
+  kind: "CronJob",
+  apiVersions: ["batch/v1"],
+  components: {
+    Details: (props) => <CronJobDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "CronJob",
+  apiVersions: ["batch/v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});

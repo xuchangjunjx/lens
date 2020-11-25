@@ -1,15 +1,14 @@
-import "./endpoints.scss"
+import "./endpoints.scss";
 
-import React from "react"
+import React from "react";
 import { observer } from "mobx-react";
-import { RouteComponentProps } from "react-router-dom"
-import { EndpointRouteParams } from "./endpoints.route"
-import { Endpoint, endpointApi } from "../../api/endpoints/endpoint.api"
+import { RouteComponentProps } from "react-router-dom";
+import { EndpointRouteParams } from "./endpoints.route";
+import { Endpoint } from "../../api/endpoints/endpoint.api";
 import { endpointStore } from "./endpoints.store";
-import { KubeObjectMenu, KubeObjectMenuProps } from "../kube-object/kube-object-menu";
 import { KubeObjectListLayout } from "../kube-object";
 import { Trans } from "@lingui/macro";
-import { apiManager } from "../../api/api-manager";
+import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 
 enum sortBy {
   name = "name",
@@ -37,19 +36,18 @@ export class Endpoints extends React.Component<Props> {
         renderHeaderTitle={<Trans>Endpoints</Trans>}
         renderTableHeader={[
           { title: <Trans>Name</Trans>, className: "name", sortBy: sortBy.name },
+          { className: "warning" },
           { title: <Trans>Namespace</Trans>, className: "namespace", sortBy: sortBy.namespace },
           { title: <Trans>Endpoints</Trans>, className: "endpoints" },
           { title: <Trans>Age</Trans>, className: "age", sortBy: sortBy.age },
         ]}
         renderTableContents={(endpoint: Endpoint) => [
           endpoint.getName(),
+          <KubeObjectStatusIcon object={endpoint} />,
           endpoint.getNs(),
           endpoint.toString(),
           endpoint.getAge(),
         ]}
-        renderItemMenu={(item: Endpoint) => {
-          return <EndpointMenu object={item}/>
-        }}
         tableProps={{
           customRowHeights: (item: Endpoint, lineHeight, paddings) => {
             const lines = item.getEndpointSubsets().length || 1;
@@ -57,16 +55,6 @@ export class Endpoints extends React.Component<Props> {
           }
         }}
       />
-    )
+    );
   }
 }
-
-export function EndpointMenu(props: KubeObjectMenuProps<Endpoint>) {
-  return (
-    <KubeObjectMenu {...props}/>
-  )
-}
-
-apiManager.registerViews(endpointApi, {
-  Menu: EndpointMenu
-})

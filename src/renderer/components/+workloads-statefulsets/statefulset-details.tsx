@@ -13,12 +13,12 @@ import { KubeEventDetails } from "../+events/kube-event-details";
 import { podsStore } from "../+workloads-pods/pods.store";
 import { statefulSetStore } from "./statefulset.store";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { StatefulSet, statefulSetApi } from "../../api/endpoints";
+import { StatefulSet } from "../../api/endpoints";
 import { ResourceMetrics, ResourceMetricsText } from "../resource-metrics";
 import { PodCharts, podMetricTabs } from "../+workloads-pods/pod-charts";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<StatefulSet> {
 }
@@ -42,12 +42,12 @@ export class StatefulSetDetails extends React.Component<Props> {
 
   render() {
     const { object: statefulSet } = this.props;
-    if (!statefulSet) return null
-    const images = statefulSet.getImages()
-    const selectors = statefulSet.getSelectors()
-    const nodeSelector = statefulSet.getNodeSelectors()
-    const childPods = statefulSetStore.getChildPods(statefulSet)
-    const metrics = statefulSetStore.metrics
+    if (!statefulSet) return null;
+    const images = statefulSet.getImages();
+    const selectors = statefulSet.getSelectors();
+    const nodeSelector = statefulSet.getNodeSelectors();
+    const childPods = statefulSetStore.getChildPods(statefulSet);
+    const metrics = statefulSetStore.metrics;
     return (
       <div className="StatefulSetDetails">
         {podsStore.isLoaded && (
@@ -89,12 +89,25 @@ export class StatefulSetDetails extends React.Component<Props> {
         </DrawerItem>
         <ResourceMetricsText metrics={metrics}/>
         <PodDetailsList pods={childPods} owner={statefulSet}/>
-        <KubeEventDetails object={statefulSet}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(statefulSetApi, {
-  Details: StatefulSetDetails
-})
+
+kubeObjectDetailRegistry.add({
+  kind: "StatefulSet",
+  apiVersions: ["apps/v1"],
+  components: {
+    Details: (props: any) => <StatefulSetDetails {...props} />
+  }
+});
+
+kubeObjectDetailRegistry.add({
+  kind: "StatefulSet",
+  apiVersions: ["apps/v1"],
+  priority: 5,
+  components: {
+    Details: (props: any) => <KubeEventDetails {...props} />
+  }
+});

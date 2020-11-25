@@ -1,4 +1,4 @@
-import "./secrets.scss"
+import "./secrets.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
@@ -12,6 +12,7 @@ import { KubeObjectListLayout } from "../kube-object";
 import { Badge } from "../badge";
 import { secretsStore } from "./secrets.store";
 import { apiManager } from "../../api/api-manager";
+import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 
 enum sortBy {
   name = "name",
@@ -47,6 +48,7 @@ export class Secrets extends React.Component<Props> {
           renderHeaderTitle={<Trans>Secrets</Trans>}
           renderTableHeader={[
             { title: <Trans>Name</Trans>, className: "name", sortBy: sortBy.name },
+            { className: "warning" },
             { title: <Trans>Namespace</Trans>, className: "namespace", sortBy: sortBy.namespace },
             { title: <Trans>Labels</Trans>, className: "labels", sortBy: sortBy.labels },
             { title: <Trans>Keys</Trans>, className: "keys", sortBy: sortBy.keys },
@@ -55,15 +57,13 @@ export class Secrets extends React.Component<Props> {
           ]}
           renderTableContents={(secret: Secret) => [
             secret.getName(),
+            <KubeObjectStatusIcon object={secret} />,
             secret.getNs(),
             secret.getLabels().map(label => <Badge key={label} label={label}/>),
             secret.getKeys().join(", "),
             secret.type,
             secret.getAge(),
           ]}
-          renderItemMenu={(item: Secret) => {
-            return <SecretMenu object={item}/>
-          }}
           addRemoveButtons={{
             onAdd: () => AddSecretDialog.open(),
             addTooltip: <Trans>Create new Secret</Trans>
@@ -74,13 +74,3 @@ export class Secrets extends React.Component<Props> {
     );
   }
 }
-
-export function SecretMenu(props: KubeObjectMenuProps<Secret>) {
-  return (
-    <KubeObjectMenu {...props}/>
-  )
-}
-
-apiManager.registerViews(secretsApi, {
-  Menu: SecretMenu,
-})

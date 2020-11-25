@@ -11,9 +11,9 @@ import { Button } from "../button";
 import { KubeEventDetails } from "../+events/kube-event-details";
 import { configMapsStore } from "./config-maps.store";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { ConfigMap, configMapApi } from "../../api/endpoints";
-import { apiManager } from "../../api/api-manager";
+import { ConfigMap } from "../../api/endpoints";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<ConfigMap> {
 }
@@ -31,7 +31,7 @@ export class ConfigMapDetails extends React.Component<Props> {
           this.data.replace(configMap.data); // refresh
         }
       })
-    ])
+    ]);
   }
 
   save = async () => {
@@ -47,7 +47,7 @@ export class ConfigMapDetails extends React.Component<Props> {
     } finally {
       this.isSaving = false;
     }
-  }
+  };
 
   render() {
     const { object: configMap } = this.props;
@@ -75,7 +75,7 @@ export class ConfigMapDetails extends React.Component<Props> {
                         />
                       </div>
                     </div>
-                  )
+                  );
                 })
               }
               <Button
@@ -87,13 +87,26 @@ export class ConfigMapDetails extends React.Component<Props> {
             </>
           )
         }
-
-        <KubeEventDetails object={configMap}/>
       </div>
     );
   }
 }
 
-apiManager.registerViews(configMapApi, {
-  Details: ConfigMapDetails
-})
+kubeObjectDetailRegistry.add({
+  kind: "ConfigMap",
+  apiVersions: ["v1"],
+  components: {
+    Details: (props) => <ConfigMapDetails {...props} />
+  }
+});
+
+kubeObjectDetailRegistry.add({
+  kind: "ConfigMap",
+  apiVersions: ["v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});
+
+

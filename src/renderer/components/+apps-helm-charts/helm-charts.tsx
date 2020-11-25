@@ -11,7 +11,7 @@ import { navigation } from "../../navigation";
 import { ItemListLayout } from "../item-object-list/item-list-layout";
 import { t, Trans } from "@lingui/macro";
 import { _i18n } from "../../i18n";
-import { SearchInput } from "../input";
+import { SearchInputUrl } from "../input";
 
 enum sortBy {
   name = "name",
@@ -28,13 +28,13 @@ export class HelmCharts extends Component<Props> {
   }
 
   get selectedChart() {
-    const { match: { params: { chartName, repo } } } = this.props
+    const { match: { params: { chartName, repo } } } = this.props;
     return helmChartStore.getByName(chartName, repo);
   }
 
   showDetails = (chart: HelmChart) => {
     if (!chart) {
-      navigation.merge(helmChartsURL())
+      navigation.merge(helmChartsURL());
     }
     else {
       navigation.merge(helmChartsURL({
@@ -42,13 +42,13 @@ export class HelmCharts extends Component<Props> {
           chartName: chart.getName(),
           repo: chart.getRepository(),
         }
-      }))
+      }));
     }
-  }
+  };
 
   hideDetails = () => {
     this.showDetails(null);
-  }
+  };
 
   render() {
     return (
@@ -72,7 +72,7 @@ export class HelmCharts extends Component<Props> {
             (items: HelmChart[]) => items.filter(item => !item.deprecated)
           ]}
           customizeHeader={() => (
-            <SearchInput placeholder={_i18n._(t`Search Helm Charts`)} />
+            <SearchInputUrl placeholder={_i18n._(t`Search Helm Charts`)} />
           )}
           renderTableHeader={[
             { className: "icon" },

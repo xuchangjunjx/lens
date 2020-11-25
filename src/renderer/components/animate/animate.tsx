@@ -15,7 +15,7 @@ export interface AnimateProps {
 
 @observer
 export class Animate extends React.Component<AnimateProps> {
-  static VISIBILITY_DELAY_MS = 100;
+  static VISIBILITY_DELAY_MS = 0;
 
   static defaultProps: AnimateProps = {
     name: "opacity",
@@ -43,7 +43,7 @@ export class Animate extends React.Component<AnimateProps> {
         delay: Animate.VISIBILITY_DELAY_MS,
         fireImmediately: true,
       })
-    ])
+    ]);
   }
 
   enter() {

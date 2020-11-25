@@ -7,7 +7,6 @@ import { Trans } from "@lingui/macro";
 import { podsStore } from "./pods.store";
 import { Pod } from "../../api/endpoints";
 import { autobind, bytesToUnits, cssNames, interval, prevDefault } from "../../utils";
-import { KubeEventIcon } from "../+events/kube-event-icon";
 import { LineProgress } from "../line-progress";
 import { KubeObject } from "../../api/kube-object";
 import { Table, TableCell, TableHead, TableRow } from "../table";
@@ -15,6 +14,7 @@ import { showDetails } from "../../navigation";
 import { reaction } from "mobx";
 import { Spinner } from "../spinner";
 import { DrawerTitle } from "../drawer";
+import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 
 enum sortBy {
   name = "name",
@@ -38,7 +38,7 @@ interface OptionalProps {
 export class PodDetailsList extends React.Component<Props> {
   static defaultProps: OptionalProps = {
     showTitle: true
-  }
+  };
 
   private metricsWatcher = interval(120, () => {
     podsStore.loadKubeMetrics(this.props.owner.getNs());
@@ -49,13 +49,13 @@ export class PodDetailsList extends React.Component<Props> {
     [sortBy.namespace]: (pod: Pod) => pod.getNs(),
     [sortBy.cpu]: (pod: Pod) => podsStore.getPodKubeMetrics(pod).cpu,
     [sortBy.memory]: (pod: Pod) => podsStore.getPodKubeMetrics(pod).memory,
-  }
+  };
 
   componentDidMount() {
     this.metricsWatcher.start(true);
     disposeOnUnmount(this, [
       reaction(() => this.props.owner, () => this.metricsWatcher.restart(true))
-    ])
+    ]);
   }
 
   componentWillUnmount() {
@@ -107,7 +107,7 @@ export class PodDetailsList extends React.Component<Props> {
         onClick={prevDefault(() => showDetails(pod.selfLink, false))}
       >
         <TableCell className="name">{pod.getName()}</TableCell>
-        <TableCell className="warning">{pod.hasIssues() && <KubeEventIcon object={pod}/>}</TableCell>
+        <TableCell className="warning"><KubeObjectStatusIcon object={pod}/></TableCell>
         <TableCell className="namespace">{pod.getNs()}</TableCell>
         <TableCell className="cpu">{this.renderCpuUsage(`cpu-${pod.getId()}`, metrics.cpu)}</TableCell>
         <TableCell className="memory">{this.renderMemoryUsage(`memory-${pod.getId()}`, metrics.memory)}</TableCell>

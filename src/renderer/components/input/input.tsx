@@ -1,15 +1,19 @@
 import "./input.scss";
 
 import React, { DOMAttributes, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { autobind, cssNames, debouncePromise } from "../../utils";
+import { autobind, cssNames, debouncePromise, getRandId } from "../../utils";
 import { Icon } from "../icon";
-import { conditionalValidators, Validator } from "./input_validators";
-import isString from "lodash/isString"
-import isFunction from "lodash/isFunction"
-import isBoolean from "lodash/isBoolean"
-import uniqueId from "lodash/uniqueId"
+import * as Validators from "./input_validators";
+import { InputValidator } from "./input_validators";
+import isString from "lodash/isString";
+import isFunction from "lodash/isFunction";
+import isBoolean from "lodash/isBoolean";
+import uniqueId from "lodash/uniqueId";
+import { Tooltip } from "../tooltip";
 
-type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
+const { conditionalValidators, ...InputValidators } = Validators;
+export { InputValidators, InputValidator };
+
 type InputElement = HTMLInputElement | HTMLTextAreaElement;
 type InputElementProps = InputHTMLAttributes<InputElement> & TextareaHTMLAttributes<InputElement> & DOMAttributes<InputElement>;
 
@@ -22,12 +26,14 @@ export type InputProps<T = string> = Omit<InputElementProps, "onChange" | "onSub
   maxRows?: number; // when multiLine={true} define max rows size
   dirty?: boolean; // show validation errors even if the field wasn't touched yet
   showValidationLine?: boolean; // show animated validation line for async validators
+  showErrorsAsTooltip?: boolean; // show validation errors as a tooltip :hover (instead of block below)
   iconLeft?: string | React.ReactNode; // material-icon name in case of string-type
   iconRight?: string | React.ReactNode;
-  validators?: Validator | Validator[];
+  contentRight?: string | React.ReactNode; // Any component of string goes after iconRight
+  validators?: InputValidator | InputValidator[];
   onChange?(value: T, evt: React.ChangeEvent<InputElement>): void;
   onSubmit?(value: T): void;
-}
+};
 
 interface State {
   focused?: boolean;
@@ -43,19 +49,19 @@ const defaultProps: Partial<InputProps> = {
   maxRows: 10000,
   showValidationLine: true,
   validators: [],
-}
+};
 
 export class Input extends React.Component<InputProps, State> {
   static defaultProps = defaultProps as object;
 
   public input: InputElement;
-  public validators: Validator[] = [];
+  public validators: InputValidator[] = [];
 
   public state: State = {
     dirty: !!this.props.dirty,
     valid: true,
     errors: [],
-  }
+  };
 
   setValue(value: string) {
     if (value !== this.getValue()) {
@@ -82,7 +88,7 @@ export class Input extends React.Component<InputProps, State> {
   }
 
   select() {
-    this.input.select()
+    this.input.select();
   }
 
   private autoFitHeight() {
@@ -145,12 +151,12 @@ export class Input extends React.Component<InputProps, State> {
     this.setState({
       validating: false,
       valid: !errors.length,
-      errors: errors,
+      errors,
     });
   }
 
-  private getValidatorError(value: string, { message }: Validator) {
-    if (isFunction(message)) return message(value, this.props)
+  private getValidatorError(value: string, { message }: InputValidator) {
+    if (isFunction(message)) return message(value, this.props);
     return message || "";
   }
 
@@ -213,12 +219,16 @@ export class Input extends React.Component<InputProps, State> {
   onKeyDown(evt: React.KeyboardEvent<any>) {
     const modified = evt.shiftKey || evt.metaKey || evt.altKey || evt.ctrlKey;
 
+    if (this.props.onKeyDown) {
+      this.props.onKeyDown(evt);
+    }
+
     switch (evt.key) {
-    case "Enter":
-      if (this.props.onSubmit && !modified && !evt.repeat) {
-        this.props.onSubmit(this.getValue());
-      }
-      break;
+      case "Enter":
+        if (this.props.onSubmit && !modified && !evt.repeat) {
+          this.props.onSubmit(this.getValue());
+        }
+        break;
     }
   }
 
@@ -257,19 +267,19 @@ export class Input extends React.Component<InputProps, State> {
 
   render() {
     const {
-      multiLine, showValidationLine, validators, theme, maxRows, children,
-      maxLength, rows, disabled, autoSelectOnFocus, iconLeft, iconRight,
+      multiLine, showValidationLine, validators, theme, maxRows, children, showErrorsAsTooltip,
+      maxLength, rows, disabled, autoSelectOnFocus, iconLeft, iconRight, contentRight,
       ...inputProps
     } = this.props;
     const { focused, dirty, valid, validating, errors } = this.state;
 
     const className = cssNames("Input", this.props.className, {
       [`theme ${theme}`]: theme,
-      focused: focused,
-      disabled: disabled,
+      focused,
+      disabled,
       invalid: !valid,
-      dirty: dirty,
-      validating: validating,
+      dirty,
+      validating,
       validatingLine: validating && showValidationLine,
     });
 
@@ -284,20 +294,31 @@ export class Input extends React.Component<InputProps, State> {
       ref: this.bindRef,
       spellCheck: "false",
     });
-
+    const tooltipId = showErrorsAsTooltip ? getRandId({ prefix: "input_tooltip_id" }) : undefined;
+    const showErrors = errors.length > 0 && !valid && dirty;
+    const errorsInfo = (
+      <div className="errors box grow">
+        {errors.map((error, i) => <p key={i}>{error}</p>)}
+      </div>
+    );
     return (
-      <div className={className}>
-        <label className="input-area flex gaps align-center">
-          {isString(iconLeft) ? <Icon material={iconLeft} /> : iconLeft}
+      <div id={tooltipId} className={className}>
+        <label className="input-area flex gaps align-center" id="">
+          {isString(iconLeft) ? <Icon material={iconLeft}/> : iconLeft}
           {multiLine ? <textarea {...inputProps as any} /> : <input {...inputProps as any} />}
-          {isString(iconRight) ? <Icon material={iconRight} /> : iconRight}
+          {isString(iconRight) ? <Icon material={iconRight}/> : iconRight}
+          {contentRight}
         </label>
-        <div className="input-info flex gaps">
-          {!valid && dirty && (
-            <div className="errors box grow">
-              {errors.map((error, i) => <p key={i}>{error}</p>)}
+        {showErrorsAsTooltip && showErrors && (
+          <Tooltip targetId={tooltipId} className="InputTooltipError">
+            <div className="flex gaps align-center">
+              <Icon material="error_outline"/>
+              {errorsInfo}
             </div>
-          )}
+          </Tooltip>
+        )}
+        <div className="input-info flex gaps">
+          {!showErrorsAsTooltip && showErrors && errorsInfo}
           {this.showMaxLenIndicator && (
             <div className="maxLengthIndicator box right">
               {this.getValue().length} / {maxLength}

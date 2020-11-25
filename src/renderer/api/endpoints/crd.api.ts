@@ -1,24 +1,26 @@
 import { KubeObject } from "../kube-object";
-import { VersionedKubeApi } from "../kube-api-versioned";
 import { crdResourcesURL } from "../../components/+custom-resources/crd.route";
+import { KubeApi } from "../kube-api";
 
 type AdditionalPrinterColumnsCommon = {
   name: string;
   type: "integer" | "number" | "string" | "boolean" | "date";
   priority: number;
   description: string;
-}
+};
 
-type AdditionalPrinterColumnsV1 = AdditionalPrinterColumnsCommon & {
+export type AdditionalPrinterColumnsV1 = AdditionalPrinterColumnsCommon & {
   jsonPath: string;
-}
+};
 
 type AdditionalPrinterColumnsV1Beta = AdditionalPrinterColumnsCommon & {
   JSONPath: string;
-}
+};
 
 export class CustomResourceDefinition extends KubeObject {
   static kind = "CustomResourceDefinition";
+  static namespaced = false;
+  static apiBase = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions";
 
   spec: {
     group: string;
@@ -43,7 +45,7 @@ export class CustomResourceDefinition extends KubeObject {
       webhook?: any;
     };
     additionalPrinterColumns?: AdditionalPrinterColumnsV1Beta[]; // removed in v1
-  }
+  };
   status: {
     conditions: {
       lastTransitionTime: string;
@@ -60,7 +62,7 @@ export class CustomResourceDefinition extends KubeObject {
       listKind: string;
     };
     storedVersions: string[];
-  }
+  };
 
   getResourceUrl() {
     return crdResourcesURL({
@@ -68,25 +70,25 @@ export class CustomResourceDefinition extends KubeObject {
         group: this.getGroup(),
         name: this.getPluralName(),
       }
-    })
+    });
   }
 
   getResourceApiBase() {
     const { group } = this.spec;
-    return `/apis/${group}/${this.getVersion()}/${this.getPluralName()}`
+    return `/apis/${group}/${this.getVersion()}/${this.getPluralName()}`;
   }
 
   getPluralName() {
-    return this.getNames().plural
+    return this.getNames().plural;
   }
 
   getResourceKind() {
-    return this.spec.names.kind
+    return this.spec.names.kind;
   }
 
   getResourceTitle() {
     const name = this.getPluralName();
-    return name[0].toUpperCase() + name.substr(1)
+    return name[0].toUpperCase() + name.substr(1);
   }
 
   getGroup() {
@@ -118,9 +120,9 @@ export class CustomResourceDefinition extends KubeObject {
     return JSON.stringify(this.spec.conversion);
   }
 
-  getPrinterColumns(ignorePriority = true) {
+  getPrinterColumns(ignorePriority = true): AdditionalPrinterColumnsV1[] {
     const columns = this.spec.versions.find(a => this.getVersion() == a.name)?.additionalPrinterColumns
-      ?? this.spec.additionalPrinterColumns?.map(({JSONPath, ...rest}) => ({ ...rest, jsonPath: JSONPath })) // map to V1 shape
+      ?? this.spec.additionalPrinterColumns?.map(({ JSONPath, ...rest }) => ({ ...rest, jsonPath: JSONPath })) // map to V1 shape
       ?? [];
     return columns
       .filter(column => column.name != "Age")
@@ -139,15 +141,12 @@ export class CustomResourceDefinition extends KubeObject {
         ...condition,
         isReady: status === "True",
         tooltip: `${message || reason} (${lastTransitionTime})`
-      }
+      };
     });
   }
 }
 
-export const crdApi = new VersionedKubeApi<CustomResourceDefinition>({
-  kind: CustomResourceDefinition.kind,
-  apiBase: "/apis/apiextensions.k8s.io/v1/customresourcedefinitions",
-  isNamespaced: false,
-  objectConstructor: CustomResourceDefinition
+export const crdApi = new KubeApi<CustomResourceDefinition>({
+  objectConstructor: CustomResourceDefinition,
+  checkPreferredVersion: true,
 });
-

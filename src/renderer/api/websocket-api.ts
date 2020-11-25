@@ -1,5 +1,5 @@
 import { observable } from "mobx";
-import { EventEmitter } from "../utils/eventEmitter";
+import { EventEmitter } from "../../common/event-emitter";
 
 interface IParams {
   url?: string;          // connection url, starts with ws:// or wss://
@@ -146,7 +146,7 @@ export class WebSocketApi {
   }
 
   protected _onError(evt: Event) {
-    this.writeLog('%cERROR', 'color:red;font-weight:bold;', evt)
+    this.writeLog('%cERROR', 'color:red;font-weight:bold;', evt);
   }
 
   protected _onClose(evt: CloseEvent) {

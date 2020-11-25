@@ -1,4 +1,4 @@
-import "./pods.scss"
+import "./pods.scss";
 
 import React, { Fragment } from "react";
 import { observer } from "mobx-react";
@@ -10,17 +10,16 @@ import { volumeClaimStore } from "../+storage-volume-claims/volume-claim.store";
 import { IPodsRouteParams } from "../+workloads";
 import { eventStore } from "../+events/event.store";
 import { KubeObjectListLayout } from "../kube-object";
-import { Pod, podsApi } from "../../api/endpoints";
-import { PodMenu } from "./pod-menu";
+import { Pod } from "../../api/endpoints";
 import { StatusBrick } from "../status-brick";
 import { cssNames, stopPropagation } from "../../utils";
-import { KubeEventIcon } from "../+events/kube-event-icon";
 import { getDetailsUrl } from "../../navigation";
 import toPairs from "lodash/toPairs";
 import startCase from "lodash/startCase";
 import kebabCase from "lodash/kebabCase";
 import { lookupApiLink } from "../../api/kube-api";
-import { apiManager } from "../../api/api-manager";
+import { KubeObjectStatusIcon } from "../kube-object-status-icon";
+
 
 enum sortBy {
   name = "name",
@@ -65,7 +64,7 @@ export class Pods extends React.Component<Props> {
             }}
           />
         </Fragment>
-      )
+      );
     });
   }
 
@@ -87,6 +86,7 @@ export class Pods extends React.Component<Props> {
         searchFilters={[
           (pod: Pod) => pod.getSearchFields(),
           (pod: Pod) => pod.getStatusMessage(),
+          (pod: Pod) => pod.status.podIP,
         ]}
         renderHeaderTitle={<Trans>Pods</Trans>}
         renderTableHeader={[
@@ -102,7 +102,7 @@ export class Pods extends React.Component<Props> {
         ]}
         renderTableContents={(pod: Pod) => [
           pod.getName(),
-          pod.hasIssues() && <KubeEventIcon object={pod}/>,
+          <KubeObjectStatusIcon object={pod} />,
           pod.getNs(),
           this.renderContainersStatus(pod),
           pod.getRestartsCount(),
@@ -113,20 +113,13 @@ export class Pods extends React.Component<Props> {
               <Link key={name} to={detailsLink} className="owner" onClick={stopPropagation}>
                 {kind}
               </Link>
-            )
+            );
           }),
           pod.getQosClass(),
           pod.getAge(),
           { title: pod.getStatusMessage(), className: kebabCase(pod.getStatusMessage()) }
         ]}
-        renderItemMenu={(item: Pod) => {
-          return <PodMenu object={item}/>
-        }}
       />
-    )
+    );
   }
 }
-
-apiManager.registerViews(podsApi, {
-  Menu: PodMenu,
-})

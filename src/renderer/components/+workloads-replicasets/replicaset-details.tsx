@@ -12,12 +12,12 @@ import { KubeEventDetails } from "../+events/kube-event-details";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { podsStore } from "../+workloads-pods/pods.store";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { ReplicaSet, replicaSetApi } from "../../api/endpoints";
+import { ReplicaSet } from "../../api/endpoints";
 import { ResourceMetrics, ResourceMetricsText } from "../resource-metrics";
 import { PodCharts, podMetricTabs } from "../+workloads-pods/pod-charts";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<ReplicaSet> {
 }
@@ -40,15 +40,15 @@ export class ReplicaSetDetails extends React.Component<Props> {
   }
 
   render() {
-    const { object: replicaSet } = this.props
-    if (!replicaSet) return null
-    const { metrics } = replicaSetStore
-    const { status } = replicaSet
-    const { availableReplicas, replicas } = status
-    const selectors = replicaSet.getSelectors()
-    const nodeSelector = replicaSet.getNodeSelectors()
-    const images = replicaSet.getImages()
-    const childPods = replicaSetStore.getChildPods(replicaSet)
+    const { object: replicaSet } = this.props;
+    if (!replicaSet) return null;
+    const { metrics } = replicaSetStore;
+    const { status } = replicaSet;
+    const { availableReplicas, replicas } = status;
+    const selectors = replicaSet.getSelectors();
+    const nodeSelector = replicaSet.getNodeSelectors();
+    const images = replicaSet.getImages();
+    const childPods = replicaSetStore.getChildPods(replicaSet);
     return (
       <div className="ReplicaSetDetails">
         {podsStore.isLoaded && (
@@ -91,12 +91,23 @@ export class ReplicaSetDetails extends React.Component<Props> {
         </DrawerItem>
         <ResourceMetricsText metrics={metrics}/>
         <PodDetailsList pods={childPods} owner={replicaSet}/>
-        <KubeEventDetails object={replicaSet}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(replicaSetApi, {
-  Details: ReplicaSetDetails,
-})
+kubeObjectDetailRegistry.add({
+  kind: "ReplicaSet",
+  apiVersions: ["apps/v1"],
+  components: {
+    Details: (props: any) => <ReplicaSetDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "ReplicaSet",
+  apiVersions: ["apps/v1"],
+  priority: 5,
+  components: {
+    Details: (props: any) => <KubeEventDetails {...props} />
+  }
+});

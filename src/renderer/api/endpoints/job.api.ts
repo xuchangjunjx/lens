@@ -7,7 +7,9 @@ import { JsonApiParams } from "../json-api";
 
 @autobind()
 export class Job extends WorkloadKubeObject {
-  static kind = "Job"
+  static kind = "Job";
+  static namespaced = true;
+  static apiBase = "/apis/batch/v1/jobs";
 
   spec: {
     parallelism?: number;
@@ -54,7 +56,7 @@ export class Job extends WorkloadKubeObject {
     serviceAccountName?: string;
     serviceAccount?: string;
     schedulerName?: string;
-  }
+  };
   status: {
     conditions: {
       type: string;
@@ -66,7 +68,7 @@ export class Job extends WorkloadKubeObject {
     startTime: string;
     completionTime: string;
     succeeded: number;
-  }
+  };
 
   getDesiredCompletions() {
     return this.spec.completions || 0;
@@ -89,21 +91,18 @@ export class Job extends WorkloadKubeObject {
   }
 
   getImages() {
-    const containers: IPodContainer[] = get(this, "spec.template.spec.containers", [])
-    return [...containers].map(container => container.image)
+    const containers: IPodContainer[] = get(this, "spec.template.spec.containers", []);
+    return [...containers].map(container => container.image);
   }
 
   delete() {
     const params: JsonApiParams = {
       query: { propagationPolicy: "Background" }
-    }
-    return super.delete(params)
+    };
+    return super.delete(params);
   }
 }
 
 export const jobApi = new KubeApi({
-  kind: Job.kind,
-  apiBase: "/apis/batch/v1/jobs",
-  isNamespaced: true,
   objectConstructor: Job,
 });

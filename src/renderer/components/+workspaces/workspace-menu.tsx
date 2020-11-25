@@ -1,4 +1,4 @@
-import "./workspace-menu.scss"
+import "./workspace-menu.scss";
 import React from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router-dom";
@@ -7,8 +7,11 @@ import { Trans } from "@lingui/macro";
 import { Menu, MenuItem, MenuProps } from "../menu";
 import { Icon } from "../icon";
 import { observable } from "mobx";
-import { workspaceStore } from "../../../common/workspace-store";
+import { WorkspaceId, workspaceStore } from "../../../common/workspace-store";
 import { cssNames } from "../../utils";
+import { navigate } from "../../navigation";
+import { clusterViewURL } from "../cluster-manager/cluster-view.route";
+import { landingURL } from "../+landing-page";
 
 interface Props extends Partial<MenuProps> {
 }
@@ -17,9 +20,19 @@ interface Props extends Partial<MenuProps> {
 export class WorkspaceMenu extends React.Component<Props> {
   @observable menuVisible = false;
 
+  activateWorkspace = (id: WorkspaceId) => {
+    const clusterId = workspaceStore.getById(id).lastActiveClusterId;
+    workspaceStore.setActive(id);
+    if (clusterId) {
+      navigate(clusterViewURL({ params: { clusterId } }));
+    } else {
+      navigate(landingURL());
+    }
+  };
+
   render() {
     const { className, ...menuProps } = this.props;
-    const { workspacesList, currentWorkspace } = workspaceStore;
+    const { enabledWorkspacesList, currentWorkspace } = workspaceStore;
     return (
       <Menu
         {...menuProps}
@@ -32,20 +45,20 @@ export class WorkspaceMenu extends React.Component<Props> {
         <Link className="workspaces-title" to={workspacesURL()}>
           <Trans>Workspaces</Trans>
         </Link>
-        {workspacesList.map(({ id: workspaceId, name, description }) => {
+        {enabledWorkspacesList.map(({ id: workspaceId, name, description }) => {
           return (
             <MenuItem
               key={workspaceId}
               title={description}
               active={workspaceId === currentWorkspace.id}
-              onClick={() => workspaceStore.setActive(workspaceId)}
+              onClick={() => this.activateWorkspace(workspaceId)}
             >
               <Icon small material="layers"/>
               <span className="workspace">{name}</span>
             </MenuItem>
-          )
+          );
         })}
       </Menu>
-    )
+    );
   }
 }

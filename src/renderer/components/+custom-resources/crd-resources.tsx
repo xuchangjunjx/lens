@@ -7,11 +7,10 @@ import { Trans } from "@lingui/macro";
 import { RouteComponentProps } from "react-router";
 import { KubeObjectListLayout } from "../kube-object";
 import { KubeObject } from "../../api/kube-object";
-import { KubeObjectMenu, KubeObjectMenuProps } from "../kube-object/kube-object-menu";
 import { ICRDRouteParams } from "./crd.route";
 import { autorun, computed } from "mobx";
 import { crdStore } from "./crd.store";
-import { SortingCallback } from "../table";
+import { TableSortCallback } from "../table";
 import { apiManager } from "../../api/api-manager";
 
 interface Props extends RouteComponentProps<ICRDRouteParams> {
@@ -33,7 +32,7 @@ export class CrdResources extends React.Component<Props> {
           store.loadAll();
         }
       })
-    ])
+    ]);
   }
 
   @computed get crd() {
@@ -42,7 +41,7 @@ export class CrdResources extends React.Component<Props> {
   }
 
   @computed get store() {
-    if (!this.crd) return null
+    if (!this.crd) return null;
     return apiManager.getStore(this.crd.getResourceApiBase());
   }
 
@@ -51,19 +50,17 @@ export class CrdResources extends React.Component<Props> {
     if (!crd) return null;
     const isNamespaced = crd.isNamespaced();
     const extraColumns = crd.getPrinterColumns(false);  // Cols with priority bigger than 0 are shown in details
-    const sortingCallbacks: { [sortBy: string]: SortingCallback } = {
+    const sortingCallbacks: { [sortBy: string]: TableSortCallback } = {
       [sortBy.name]: (item: KubeObject) => item.getName(),
       [sortBy.namespace]: (item: KubeObject) => item.getNs(),
       [sortBy.age]: (item: KubeObject) => item.metadata.creationTimestamp,
-    }
+    };
     extraColumns.forEach(column => {
-      sortingCallbacks[column.name] = (item: KubeObject) => jsonPath.query(item, column.jsonPath.slice(1))
-    })
-    // todo: merge extra columns and other params to predefined view
-    const { List } = apiManager.getViews(crd.getResourceApiBase());
-    const ListView = List || KubeObjectListLayout;
+      sortingCallbacks[column.name] = (item: KubeObject) => jsonPath.value(item, column.jsonPath.slice(1));
+    });
+
     return (
-      <ListView
+      <KubeObjectListLayout
         className="CrdResources"
         isClusterScoped={!isNamespaced}
         store={store}
@@ -81,32 +78,20 @@ export class CrdResources extends React.Component<Props> {
               title: name,
               className: name.toLowerCase(),
               sortBy: name
-            }
+            };
           }),
           { title: <Trans>Age</Trans>, className: "age", sortBy: sortBy.age },
         ]}
         renderTableContents={(crdInstance: KubeObject) => [
           crdInstance.getName(),
           isNamespaced && crdInstance.getNs(),
-          ...extraColumns.map(column => {
-            return jsonPath.query(crdInstance, (column.jsonPath).slice(1))
-          }),
+          ...extraColumns.map(column => ({
+            renderBoolean: true,
+            children: jsonPath.value(crdInstance, column.jsonPath.slice(1)),
+          })),
           crdInstance.getAge(),
         ]}
-        renderItemMenu={(item: KubeObject) => {
-          return <CrdResourceMenu object={item}/>
-        }}
       />
-    )
+    );
   }
-}
-
-export function CrdResourceMenu(props: KubeObjectMenuProps<KubeObject>) {
-  const { Menu } = apiManager.getViews(props.object.selfLink);
-  if (Menu) {
-    return <Menu {...props}/>
-  }
-  return (
-    <KubeObjectMenu {...props}/>
-  )
 }

@@ -9,15 +9,14 @@ import { nodesStore } from "./nodes.store";
 import { podsStore } from "../+workloads-pods/pods.store";
 import { KubeObjectListLayout } from "../kube-object";
 import { INodesRouteParams } from "./nodes.route";
-import { Node, nodesApi } from "../../api/endpoints/nodes.api";
-import { NodeMenu } from "./node-menu";
+import { Node } from "../../api/endpoints/nodes.api";
 import { LineProgress } from "../line-progress";
 import { _i18n } from "../../i18n";
 import { bytesToUnits } from "../../utils/convertMemory";
 import { Tooltip, TooltipPosition } from "../tooltip";
 import kebabCase from "lodash/kebabCase";
 import upperFirst from "lodash/upperFirst";
-import { apiManager } from "../../api/api-manager";
+import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 
 enum sortBy {
   name = "name",
@@ -57,11 +56,11 @@ export class Nodes extends React.Component<Props> {
         max={cores}
         value={usage}
         tooltip={{
-          position: TooltipPosition.BOTTOM,
+          preferredPositions: TooltipPosition.BOTTOM,
           children: _i18n._(t`CPU:`) + ` ${Math.ceil(usage * 100) / cores}\%, ` + _i18n._(t`cores:`) + ` ${cores}`
         }}
       />
-    )
+    );
   }
 
   renderMemoryUsage(node: Node) {
@@ -74,11 +73,11 @@ export class Nodes extends React.Component<Props> {
         max={capacity}
         value={usage}
         tooltip={{
-          position: TooltipPosition.BOTTOM,
+          preferredPositions: TooltipPosition.BOTTOM,
           children: _i18n._(t`Memory:`) + ` ${Math.ceil(usage * 100 / capacity)}%, ${bytesToUnits(usage, 3)}`
         }}
       />
-    )
+    );
   }
 
   renderDiskUsage(node: Node): any {
@@ -91,21 +90,21 @@ export class Nodes extends React.Component<Props> {
         max={capacity}
         value={usage}
         tooltip={{
-          position: TooltipPosition.BOTTOM,
+          preferredPositions: TooltipPosition.BOTTOM,
           children: _i18n._(t`Disk:`) + ` ${Math.ceil(usage * 100 / capacity)}%, ${bytesToUnits(usage, 3)}`
         }}
       />
-    )
+    );
   }
 
   renderConditions(node: Node) {
     if (!node.status.conditions) {
-      return null
+      return null;
     }
     const conditions = node.getActiveConditions();
     return conditions.map(condition => {
-      const { type } = condition
-      const tooltipId = `node-${node.getName()}-condition-${type}`
+      const { type } = condition;
+      const tooltipId = `node-${node.getName()}-condition-${type}`;
       return (
         <div key={type} id={tooltipId} className={cssNames("condition", kebabCase(type))}>
           {type}
@@ -117,8 +116,8 @@ export class Nodes extends React.Component<Props> {
               </div>
             )}
           </Tooltip>
-        </div>)
-    })
+        </div>);
+    });
   }
 
   render() {
@@ -150,6 +149,7 @@ export class Nodes extends React.Component<Props> {
           renderHeaderTitle={<Trans>Nodes</Trans>}
           renderTableHeader={[
             { title: <Trans>Name</Trans>, className: "name", sortBy: sortBy.name },
+            { className: "warning" },
             { title: <Trans>CPU</Trans>, className: "cpu", sortBy: sortBy.cpu },
             { title: <Trans>Memory</Trans>, className: "memory", sortBy: sortBy.memory },
             { title: <Trans>Disk</Trans>, className: "disk", sortBy: sortBy.disk },
@@ -163,6 +163,7 @@ export class Nodes extends React.Component<Props> {
             const tooltipId = `node-taints-${node.getId()}`;
             return [
               node.getName(),
+              <KubeObjectStatusIcon object={node} />,
               this.renderCpuUsage(node),
               this.renderMemoryUsage(node),
               this.renderDiskUsage(node),
@@ -176,17 +177,10 @@ export class Nodes extends React.Component<Props> {
               node.status.nodeInfo.kubeletVersion,
               node.getAge(),
               this.renderConditions(node),
-            ]
-          }}
-          renderItemMenu={(item: Node) => {
-            return <NodeMenu object={item}/>
+            ];
           }}
         />
       </TabLayout>
-    )
+    );
   }
 }
-
-apiManager.registerViews(nodesApi, {
-  Menu: NodeMenu,
-});

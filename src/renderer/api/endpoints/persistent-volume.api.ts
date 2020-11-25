@@ -5,7 +5,9 @@ import { KubeApi } from "../kube-api";
 
 @autobind()
 export class PersistentVolume extends KubeObject {
-  static kind = "PersistentVolume"
+  static kind = "PersistentVolume";
+  static namespaced = false;
+  static apiBase = "/api/v1/persistentvolumes";
 
   spec: {
     capacity: {
@@ -36,17 +38,17 @@ export class PersistentVolume extends KubeObject {
       path: string;
       server: string;
     };
-  }
+  };
 
   status: {
     phase: string;
     reason?: string;
-  }
+  };
 
   getCapacity(inBytes = false) {
     const capacity = this.spec.capacity;
     if (capacity) {
-      if (inBytes) return unitsToBytes(capacity.storage)
+      if (inBytes) return unitsToBytes(capacity.storage);
       return capacity.storage;
     }
     return 0;
@@ -64,8 +66,5 @@ export class PersistentVolume extends KubeObject {
 }
 
 export const persistentVolumeApi = new KubeApi({
-  kind: PersistentVolume.kind,
-  apiBase: "/api/v1/persistentvolumes",
-  isNamespaced: false,
   objectConstructor: PersistentVolume,
 });

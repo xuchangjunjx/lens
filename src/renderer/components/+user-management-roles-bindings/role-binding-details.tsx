@@ -1,9 +1,9 @@
-import "./role-binding-details.scss"
+import "./role-binding-details.scss";
 
 import React from "react";
 import { t, Trans } from "@lingui/macro";
 import { AddRemoveButtons } from "../add-remove-buttons";
-import { clusterRoleBindingApi, IRoleBindingSubject, RoleBinding, roleBindingApi } from "../../api/endpoints";
+import { IRoleBindingSubject, RoleBinding } from "../../api/endpoints";
 import { autobind, prevDefault } from "../../utils";
 import { Table, TableCell, TableHead, TableRow } from "../table";
 import { ConfirmDialog } from "../confirm-dialog";
@@ -15,8 +15,8 @@ import { roleBindingsStore } from "./role-bindings.store";
 import { AddRoleBindingDialog } from "./add-role-binding-dialog";
 import { KubeObjectDetailsProps } from "../kube-object";
 import { _i18n } from "../../i18n";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<RoleBinding> {
 }
@@ -30,7 +30,7 @@ export class RoleBindingDetails extends React.Component<Props> {
       reaction(() => this.props.object, (obj) => {
         this.selectedSubjects.clear();
       })
-    ])
+    ]);
   }
 
   selectSubject(subject: IRoleBindingSubject) {
@@ -40,7 +40,7 @@ export class RoleBindingDetails extends React.Component<Props> {
       isSelected
         ? selectedSubjects.filter(sub => sub !== subject) // unselect
         : selectedSubjects.concat(subject) // select
-    )
+    );
   }
 
   @autobind()
@@ -53,7 +53,7 @@ export class RoleBindingDetails extends React.Component<Props> {
       message: (
         <p><Trans>Remove selected bindings for <b>{roleBinding.getName()}</b>?</Trans></p>
       )
-    })
+    });
   }
 
   render() {
@@ -106,13 +106,11 @@ export class RoleBindingDetails extends React.Component<Props> {
                     <TableCell className="type">{kind}</TableCell>
                     <TableCell className="ns">{namespace || "-"}</TableCell>
                   </TableRow>
-                )
+                );
               })
             }
           </Table>
         )}
-
-        <KubeEventDetails object={roleBinding}/>
 
         <AddRemoveButtons
           onAdd={() => AddRoleBindingDialog.open(roleBinding)}
@@ -121,10 +119,39 @@ export class RoleBindingDetails extends React.Component<Props> {
           removeTooltip={<Trans>Remove selected bindings from ${name}</Trans>}
         />
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews([roleBindingApi, clusterRoleBindingApi], {
-  Details: RoleBindingDetails,
+kubeObjectDetailRegistry.add({
+  kind: "RoleBinding",
+  apiVersions: ["rbac.authorization.k8s.io/v1"],
+  components: {
+    Details: (props) => <RoleBindingDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "RoleBinding",
+  apiVersions: ["rbac.authorization.k8s.io/v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});
+
+
+kubeObjectDetailRegistry.add({
+  kind: "ClusterRoleBinding",
+  apiVersions: ["rbac.authorization.k8s.io/v1"],
+  components: {
+    Details: (props) => <RoleBindingDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "ClusterRoleBinding",
+  apiVersions: ["rbac.authorization.k8s.io/v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
 });

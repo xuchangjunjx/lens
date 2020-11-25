@@ -39,7 +39,7 @@ export class DeploymentScaleDialog extends Component<Props> {
 
   close = () => {
     DeploymentScaleDialog.close();
-  }
+  };
 
   @computed get scaleMax() {
     const { currentReplicas } = this;
@@ -57,15 +57,15 @@ export class DeploymentScaleDialog extends Component<Props> {
     });
     this.desiredReplicas = this.currentReplicas;
     this.ready = true;
-  }
+  };
 
   onClose = () => {
     this.ready = false;
-  }
+  };
 
   onChange = (evt: React.ChangeEvent, value: number) => {
     this.desiredReplicas = value;
-  }
+  };
 
   scale = async () => {
     const { deployment } = this;
@@ -81,22 +81,42 @@ export class DeploymentScaleDialog extends Component<Props> {
     } catch (err) {
       Notifications.error(err);
     }
-  }
+  };
+
+  desiredReplicasUp = () => {
+    this.desiredReplicas < this.scaleMax && this.desiredReplicas++;
+  };
+  
+  desiredReplicasDown = () => {
+    this.desiredReplicas > 1 && this.desiredReplicas--;
+  };
 
   renderContents() {
     const { currentReplicas, desiredReplicas, onChange, scaleMax } = this;
     const warning = currentReplicas < 10 && desiredReplicas > 90;
     return (
       <>
-        <div className="current-scale">
+        <div className="current-scale" data-testid="current-scale">
           <Trans>Current replica scale: {currentReplicas}</Trans>
         </div>
         <div className="flex gaps align-center">
-          <div className="desired-scale">
+          <div className="desired-scale" data-testid="desired-scale">
             <Trans>Desired number of replicas</Trans>: {desiredReplicas}
           </div>
-          <div className="slider-container">
+          <div className="slider-container flex align-center">
             <Slider value={desiredReplicas} max={scaleMax} onChange={onChange as any /** see: https://github.com/mui-org/material-ui/issues/20191 */}/>
+          </div>
+          <div className="plus-minus-container flex gaps">
+            <Icon
+              material="add_circle_outline"
+              onClick={this.desiredReplicasUp}
+              data-testid="desired-replicas-up"
+            />
+            <Icon
+              material="remove_circle_outline"
+              onClick={this.desiredReplicasDown}
+              data-testid="desired-replicas-down"
+            />
           </div>
         </div>
         {warning &&
@@ -106,7 +126,7 @@ export class DeploymentScaleDialog extends Component<Props> {
         </div>
         }
       </>
-    )
+    );
   }
 
   render() {

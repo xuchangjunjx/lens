@@ -1,26 +1,31 @@
-import "./workspaces.scss"
+import "./workspaces.scss";
 import React, { Fragment } from "react";
 import { observer } from "mobx-react";
 import { computed, observable, toJS } from "mobx";
 import { t, Trans } from "@lingui/macro";
 import { WizardLayout } from "../layout/wizard-layout";
 import { Workspace, WorkspaceId, workspaceStore } from "../../../common/workspace-store";
-import { v4 as uuid } from "uuid"
+import { v4 as uuid } from "uuid";
 import { _i18n } from "../../i18n";
 import { ConfirmDialog } from "../confirm-dialog";
 import { Icon } from "../icon";
 import { Input } from "../input";
 import { cssNames, prevDefault } from "../../utils";
 import { Button } from "../button";
-import { isRequired, Validator } from "../input/input_validators";
+import { isRequired, InputValidator } from "../input/input_validators";
+import { clusterStore } from "../../../common/cluster-store";
 
 @observer
 export class Workspaces extends React.Component {
   @observable editingWorkspaces = observable.map<WorkspaceId, Workspace>();
 
   @computed get workspaces(): Workspace[] {
+    const currentWorkspaces: Map<WorkspaceId, Workspace> = new Map();
+    workspaceStore.workspacesList.forEach((w) => {
+      currentWorkspaces.set(w.id, w);
+    });
     const allWorkspaces = new Map([
-      ...workspaceStore.workspaces,
+      ...currentWorkspaces,
       ...this.editingWorkspaces,
     ]);
     return Array.from(allWorkspaces.values());
@@ -37,34 +42,44 @@ export class Workspaces extends React.Component {
           <Trans>A single workspaces contains a list of clusters and their full configuration.</Trans>
         </p>
       </Fragment>
-    )
+    );
   }
 
   saveWorkspace = (id: WorkspaceId) => {
-    const draft = toJS(this.editingWorkspaces.get(id));
-    const workspace = workspaceStore.saveWorkspace(draft);
-    if (workspace) {
+    const workspace = new Workspace(this.editingWorkspaces.get(id));
+    if (workspaceStore.getById(id)) {
+      workspaceStore.updateWorkspace(workspace);
+      this.clearEditing(id);
+      return;
+    }
+    if (workspaceStore.addWorkspace(workspace)) {
       this.clearEditing(id);
     }
-  }
+  };
 
   addWorkspace = () => {
     const workspaceId = uuid();
-    this.editingWorkspaces.set(workspaceId, {
+    this.editingWorkspaces.set(workspaceId, new Workspace({
       id: workspaceId,
       name: "",
-      description: "",
-    })
-  }
+      description: ""
+    }));
+  };
 
   editWorkspace = (id: WorkspaceId) => {
     const workspace = workspaceStore.getById(id);
     this.editingWorkspaces.set(id, toJS(workspace));
-  }
+  };
+
+  activateWorkspace = (id: WorkspaceId) => {
+    const clusterId = workspaceStore.getById(id).lastActiveClusterId;
+    workspaceStore.setActive(id);
+    clusterStore.setActive(clusterId);
+  };
 
   clearEditing = (id: WorkspaceId) => {
     this.editingWorkspaces.delete(id);
-  }
+  };
 
   removeWorkspace = (id: WorkspaceId) => {
     const workspace = workspaceStore.getById(id);
@@ -76,7 +91,7 @@ export class Workspaces extends React.Component {
       },
       ok: () => {
         this.clearEditing(id);
-        workspaceStore.removeWorkspace(id);
+        workspaceStore.removeWorkspace(workspace);
       },
       message: (
         <div className="confirm flex column gaps">
@@ -88,8 +103,8 @@ export class Workspaces extends React.Component {
           </p>
         </div>
       ),
-    })
-  }
+    });
+  };
 
   onInputKeypress = (evt: React.KeyboardEvent<any>, workspaceId: WorkspaceId) => {
     if (evt.key == 'Enter') {
@@ -98,7 +113,7 @@ export class Workspaces extends React.Component {
       evt.currentTarget.focus();
       this.saveWorkspace(workspaceId);
     }
-  }
+  };
 
   render() {
     return (
@@ -107,30 +122,31 @@ export class Workspaces extends React.Component {
           <Trans>Workspaces</Trans>
         </h2>
         <div className="items flex column gaps">
-          {this.workspaces.map(({ id: workspaceId, name, description }) => {
+          {this.workspaces.map(({ id: workspaceId, name, description, ownerRef }) => {
             const isActive = workspaceStore.currentWorkspaceId === workspaceId;
             const isDefault = workspaceStore.isDefault(workspaceId);
             const isEditing = this.editingWorkspaces.has(workspaceId);
             const editingWorkspace = this.editingWorkspaces.get(workspaceId);
-            const className = cssNames("workspace flex gaps", {
+            const managed = !!ownerRef;
+            const className = cssNames("workspace flex gaps align-center", {
               active: isActive,
               editing: isEditing,
               default: isDefault,
             });
-            const existenceValidator: Validator = {
+            const existenceValidator: InputValidator = {
               message: () => `Workspace '${name}' already exists`,
               validate: value => !workspaceStore.getByName(value.trim())
-            }
+            };
             return (
-              <div key={workspaceId} className={className}>
+              <div key={workspaceId} className={cssNames(className)}>
                 {!isEditing && (
                   <Fragment>
                     <span className="name flex gaps align-center">
-                      <a href="#" onClick={prevDefault(() => workspaceStore.setActive(workspaceId))}>{name}</a>
+                      <a href="#" onClick={prevDefault(() => this.activateWorkspace(workspaceId))}>{name}</a>
                       {isActive && <span> <Trans>(current)</Trans></span>}
                     </span>
                     <span className="description">{description}</span>
-                    {!isDefault && (
+                    {!isDefault && !managed && (
                       <Fragment>
                         <Icon
                           material="edit"
@@ -177,7 +193,7 @@ export class Workspaces extends React.Component {
                   </Fragment>
                 )}
               </div>
-            )
+            );
           })}
         </div>
         <Button

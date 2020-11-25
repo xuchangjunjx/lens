@@ -1,7 +1,6 @@
 import React from "react";
 import { Trans } from "@lingui/macro";
 import { observer } from "mobx-react";
-import { clusterIpc } from "../../../../common/cluster-ipc";
 import { clusterStore } from "../../../../common/cluster-store";
 import { Cluster } from "../../../../main/cluster";
 import { autobind } from "../../../utils";
@@ -22,14 +21,15 @@ export class RemoveClusterButton extends React.Component<Props> {
       labelOk: <Trans>Yes</Trans>,
       labelCancel: <Trans>No</Trans>,
       ok: async () => {
-        await clusterStore.removeById(cluster.id); 
+        await clusterStore.removeById(cluster.id);
       }
-    })
+    });
   }
 
   render() {
+    const { cluster } = this.props;
     return (
-      <Button accent onClick={this.confirmRemoveCluster} className="button-area">
+      <Button accent onClick={this.confirmRemoveCluster} className="button-area" disabled={cluster.isManaged}>
         Remove Cluster
       </Button>
     );

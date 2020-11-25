@@ -21,8 +21,8 @@ import { PodCharts, podMetricTabs } from "../+workloads-pods/pod-charts";
 import { reaction } from "mobx";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
 import { ReplicaSets } from "../+workloads-replicasets";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<Deployment> {
 }
@@ -49,13 +49,13 @@ export class DeploymentDetails extends React.Component<Props> {
 
   render() {
     const { object: deployment } = this.props;
-    if (!deployment) return null
-    const { status, spec } = deployment
-    const nodeSelector = deployment.getNodeSelectors()
+    if (!deployment) return null;
+    const { status, spec } = deployment;
+    const nodeSelector = deployment.getNodeSelectors();
     const selectors = deployment.getSelectors();
-    const childPods = deploymentStore.getChildPods(deployment)
-    const replicaSets = replicaSetStore.getReplicaSetsByOwner(deployment)
-    const metrics = deploymentStore.metrics
+    const childPods = deploymentStore.getChildPods(deployment);
+    const replicaSets = replicaSetStore.getReplicaSetsByOwner(deployment);
+    const metrics = deploymentStore.metrics;
     return (
       <div className="DeploymentDetails">
         {podsStore.isLoaded && (
@@ -94,7 +94,7 @@ export class DeploymentDetails extends React.Component<Props> {
         <DrawerItem name={<Trans>Conditions</Trans>} className="conditions" labelsOnly>
           {
             deployment.getConditions().map(condition => {
-              const { type, message, lastTransitionTime, status } = condition
+              const { type, message, lastTransitionTime, status } = condition;
               return (
                 <Badge
                   key={type}
@@ -116,12 +116,23 @@ export class DeploymentDetails extends React.Component<Props> {
         <ResourceMetricsText metrics={metrics}/>
         <ReplicaSets replicaSets={replicaSets}/>
         <PodDetailsList pods={childPods} owner={deployment}/>
-        <KubeEventDetails object={deployment}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(deploymentApi, {
-  Details: DeploymentDetails
-})
+kubeObjectDetailRegistry.add({
+  kind: "Deployment",
+  apiVersions: ["apps/v1"],
+  components: {
+    Details: (props: any) => <DeploymentDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "Deployment",
+  apiVersions: ["apps/v1"],
+  priority: 5,
+  components: {
+    Details: (props: any) => <KubeEventDetails {...props} />
+  }
+});

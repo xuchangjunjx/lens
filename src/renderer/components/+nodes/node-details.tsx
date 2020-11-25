@@ -11,13 +11,13 @@ import { nodesStore } from "./nodes.store";
 import { ResourceMetrics } from "../resource-metrics";
 import { podsStore } from "../+workloads-pods/pods.store";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { Node, nodesApi } from "../../api/endpoints";
+import { Node } from "../../api/endpoints";
 import { NodeCharts } from "./node-charts";
 import { reaction } from "mobx";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
 import { KubeEventDetails } from "../+events/kube-event-details";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<Node> {
 }
@@ -42,12 +42,12 @@ export class NodeDetails extends React.Component<Props> {
   render() {
     const { object: node } = this.props;
     if (!node) return;
-    const { status } = node
-    const { nodeInfo, addresses, capacity, allocatable } = status
+    const { status } = node;
+    const { nodeInfo, addresses, capacity, allocatable } = status;
     const conditions = node.getActiveConditions();
-    const taints = node.getTaints()
-    const childPods = podsStore.getPodsByNode(node.getName())
-    const metrics = nodesStore.nodeMetrics
+    const taints = node.getTaints();
+    const childPods = podsStore.getPodsByNode(node.getName());
+    const metrics = nodesStore.nodeMetrics;
     const metricTabs = [
       <Trans>CPU</Trans>,
       <Trans>Memory</Trans>,
@@ -120,7 +120,7 @@ export class NodeDetails extends React.Component<Props> {
         <DrawerItem name={<Trans>Conditions</Trans>} className="conditions" labelsOnly>
           {
             conditions.map(condition => {
-              const { type } = condition
+              const { type } = condition;
               return (
                 <Badge
                   key={type}
@@ -138,7 +138,7 @@ export class NodeDetails extends React.Component<Props> {
                     )
                   }}
                 />
-              )
+              );
             })
           }
         </DrawerItem>
@@ -149,12 +149,24 @@ export class NodeDetails extends React.Component<Props> {
           maxCpu={node.getCpuCapacity()}
           maxMemory={node.getMemoryCapacity()}
         />
-        <KubeEventDetails object={node}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(nodesApi, {
-  Details: NodeDetails,
+kubeObjectDetailRegistry.add({
+  kind: "Node",
+  apiVersions: ["v1"],
+  components: {
+    Details: (props) => <NodeDetails {...props} />
+  }
+});
+
+kubeObjectDetailRegistry.add({
+  kind: "Node",
+  apiVersions: ["v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
 });

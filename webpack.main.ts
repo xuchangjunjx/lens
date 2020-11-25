@@ -17,15 +17,11 @@ export default function (): webpack.Configuration {
       main: path.resolve(mainDir, "index.ts"),
     },
     output: {
+      libraryTarget: "global",
       path: buildDir,
     },
     resolve: {
       extensions: ['.json', '.js', '.ts']
-    },
-    node: {
-      // webpack modifies node internals by default, keep as is for main-process
-      __dirname: false,
-      __filename: false,
     },
     externals: [
       nodeExternals()
@@ -51,6 +47,6 @@ export default function (): webpack.Configuration {
     plugins: [
       new ProgressBarPlugin(),
       new ForkTsCheckerPlugin(),
-    ]
+    ].filter(Boolean)
   }
 }

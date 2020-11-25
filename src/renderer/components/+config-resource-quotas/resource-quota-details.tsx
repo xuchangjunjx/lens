@@ -6,11 +6,12 @@ import { Trans } from "@lingui/macro";
 import { DrawerItem, DrawerTitle } from "../drawer";
 import { cpuUnitsToNumber, cssNames, unitsToBytes, metricUnitsToNumber } from "../../utils";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { ResourceQuota, resourceQuotaApi } from "../../api/endpoints/resource-quota.api";
+import { ResourceQuota } from "../../api/endpoints/resource-quota.api";
 import { LineProgress } from "../line-progress";
 import { Table, TableCell, TableHead, TableRow } from "../table";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
+import { ReplicaSetDetails } from "../+workloads-replicasets";
 
 interface Props extends KubeObjectDetailsProps<ResourceQuota> {
 }
@@ -19,24 +20,24 @@ const onlyNumbers = /$[0-9]*^/g;
 
 function transformUnit(name: string, value: string): number {
   if (name.includes("memory") || name.includes("storage")) {
-    return unitsToBytes(value)
+    return unitsToBytes(value);
   }
 
   if (name.includes("cpu")) {
-    return cpuUnitsToNumber(value)
+    return cpuUnitsToNumber(value);
   }
 
   return metricUnitsToNumber(value);
 }
 
 function renderQuotas(quota: ResourceQuota): JSX.Element[] {
-  const { hard = {}, used = {} } = quota.status
+  const { hard = {}, used = {} } = quota.status;
 
   return Object.entries(hard)
     .filter(([name]) => used[name])
     .map(([name, value]) => {
-      const current = transformUnit(name, used[name])
-      const max = transformUnit(name, value)
+      const current = transformUnit(name, used[name]);
+      const max = transformUnit(name, value);
       const usage = max === 0 ? 100 : Math.ceil(current / max * 100); // special case 0 max as always 100% usage
 
       return (
@@ -51,8 +52,8 @@ function renderQuotas(quota: ResourceQuota): JSX.Element[] {
             }
           />
         </div>
-      )
-    })
+      );
+    });
 }
 
 @observer
@@ -97,6 +98,10 @@ export class ResourceQuotaDetails extends React.Component<Props> {
   }
 }
 
-apiManager.registerViews(resourceQuotaApi, {
-  Details: ResourceQuotaDetails
-})
+kubeObjectDetailRegistry.add({
+  kind: "ResourceQuota",
+  apiVersions: ["v1"],
+  components: {
+    Details: (props) => <ReplicaSetDetails {...props} />
+  }
+});

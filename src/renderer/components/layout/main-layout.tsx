@@ -10,7 +10,7 @@ import { Dock } from "../dock";
 import { getHostedCluster } from "../../../common/cluster-store";
 import { ResizeDirection, ResizeGrowthDirection, ResizeSide, ResizingAnchor } from "../resizing-anchor";
 
-interface Props {
+export interface MainLayoutProps {
   className?: any;
   footer?: React.ReactNode;
   headerClass?: string;
@@ -18,7 +18,7 @@ interface Props {
 }
 
 @observer
-export class MainLayout extends React.Component<Props> {
+export class MainLayout extends React.Component<MainLayoutProps> {
   public storage = createStorage("main_layout", {
     pinnedSidebar: true,
     sidebarWidth: 200,
@@ -26,7 +26,7 @@ export class MainLayout extends React.Component<Props> {
 
   @observable isPinned = this.storage.get().pinnedSidebar;
   @observable isAccessible = true;
-  @observable sidebarWidth = this.storage.get().sidebarWidth
+  @observable sidebarWidth = this.storage.get().sidebarWidth;
 
   @disposeOnUnmount syncPinnedStateWithStorage = reaction(
     () => this.isPinned,
@@ -38,6 +38,7 @@ export class MainLayout extends React.Component<Props> {
     (sidebarWidth) => this.storage.merge({ sidebarWidth })
   );
 
+
   toggleSidebar = () => {
     this.isPinned = !this.isPinned;
     this.isAccessible = false;
@@ -47,12 +48,12 @@ export class MainLayout extends React.Component<Props> {
   getSidebarSize = () => {
     return {
       "--sidebar-width": `${this.sidebarWidth}px`,
-    }
-  }
+    };
+  };
 
   @autobind()
   adjustWidth(newWidth: number): void {
-    this.sidebarWidth = newWidth
+    this.sidebarWidth = newWidth;
   }
 
   render() {
@@ -64,7 +65,7 @@ export class MainLayout extends React.Component<Props> {
     return (
       <div className={cssNames("MainLayout", className)} style={this.getSidebarSize() as any}>
         <header className={cssNames("flex gaps align-center", headerClass)}>
-          <span className="cluster">{cluster.preferences.clusterName || cluster.contextName}</span>
+          <span className="cluster">{cluster.name}</span>
         </header>
 
         <aside className={cssNames("flex column", { pinned: this.isPinned, accessible: this.isAccessible })}>

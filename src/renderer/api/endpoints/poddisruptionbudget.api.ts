@@ -5,18 +5,20 @@ import { KubeApi } from "../kube-api";
 @autobind()
 export class PodDisruptionBudget extends KubeObject {
   static kind = "PodDisruptionBudget";
+  static namespaced = true;
+  static apiBase = "/apis/policy/v1beta1/poddisruptionbudgets";
 
   spec: {
     minAvailable: string;
     maxUnavailable: string;
     selector: { matchLabels: { [app: string]: string } };
-  }
+  };
   status: {
     currentHealthy: number
     desiredHealthy: number
     disruptionsAllowed: number
     expectedPods: number
-  }
+  };
 
   getSelectors() {
     const selector = this.spec.selector;
@@ -42,8 +44,5 @@ export class PodDisruptionBudget extends KubeObject {
 }
 
 export const pdbApi = new KubeApi({
-  kind: PodDisruptionBudget.kind,
-  apiBase: "/apis/policy/v1beta1/poddisruptionbudgets",
-  isNamespaced: true,
   objectConstructor: PodDisruptionBudget,
 });

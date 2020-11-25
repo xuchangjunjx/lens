@@ -1,4 +1,4 @@
-import './icon.scss'
+import './icon.scss';
 
 import React, { ReactNode } from "react";
 import { findDOMNode } from "react-dom";
@@ -6,7 +6,7 @@ import { NavLink } from "react-router-dom";
 import { LocationDescriptor } from 'history';
 import { autobind, cssNames } from "../../utils";
 import { TooltipDecoratorProps, withTooltip } from "../tooltip";
-import isNumber from "lodash/isNumber"
+import isNumber from "lodash/isNumber";
 
 export interface IconProps extends React.HTMLAttributes<any>, TooltipDecoratorProps {
   material?: string;          // material-icon, see available names at https://material.io/icons/
@@ -15,6 +15,7 @@ export interface IconProps extends React.HTMLAttributes<any>, TooltipDecoratorPr
   href?: string;              // render icon as hyperlink
   size?: string | number;     // icon-size
   small?: boolean;            // pre-defined icon-size
+  smallest?: boolean;            // pre-defined icon-size
   big?: boolean;              // pre-defined icon-size
   active?: boolean;           // apply active-state styles
   interactive?: boolean;      // indicates that icon is interactive and highlight it on focus/hover
@@ -31,7 +32,7 @@ export class Icon extends React.PureComponent<IconProps> {
 
   get isInteractive() {
     const { interactive, onClick, href, link } = this.props;
-    return interactive || !!(onClick || href || link);
+    return interactive ?? !!(onClick || href || link);
   }
 
   @autobind()
@@ -47,12 +48,12 @@ export class Icon extends React.PureComponent<IconProps> {
   @autobind()
   onKeyDown(evt: React.KeyboardEvent<any>) {
     switch (evt.nativeEvent.code) {
-    case "Space":
-    case "Enter":
-      const icon = findDOMNode(this) as HTMLElement;
-      setTimeout(() => icon.click());
-      evt.preventDefault();
-      break;
+      case "Space":
+      case "Enter":
+        const icon = findDOMNode(this) as HTMLElement;
+        setTimeout(() => icon.click());
+        evt.preventDefault();
+        break;
     }
     if (this.props.onKeyDown) {
       this.props.onKeyDown(evt);
@@ -63,7 +64,7 @@ export class Icon extends React.PureComponent<IconProps> {
     const { isInteractive } = this;
     const {
       // skip passing props to icon's html element
-      className, href, link, material, svg, size, small, big,
+      className, href, link, material, svg, size, smallest, small, big,
       disabled, sticker, active, focusable, children,
       interactive: _interactive,
       onClick: _onClick,
@@ -75,7 +76,7 @@ export class Icon extends React.PureComponent<IconProps> {
     const iconProps: Partial<IconProps> = {
       className: cssNames("Icon", className,
         { svg, material, interactive: isInteractive, disabled, sticker, active, focusable },
-        !size ? { small, big } : {}
+        !size ? { smallest, small, big } : {}
       ),
       onClick: isInteractive ? this.onClick : undefined,
       onKeyDown: isInteractive ? this.onKeyDown : undefined,
@@ -105,11 +106,11 @@ export class Icon extends React.PureComponent<IconProps> {
 
     // render icon type
     if (link) {
-      return <NavLink {...iconProps} to={link}/>
+      return <NavLink {...iconProps} to={link}/>;
     }
     if (href) {
-      return <a {...iconProps} href={href}/>
+      return <a {...iconProps} href={href}/>;
     }
-    return <i {...iconProps} />
+    return <i {...iconProps} />;
   }
 }

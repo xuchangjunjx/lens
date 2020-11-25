@@ -1,5 +1,5 @@
 import { computed, observable, reaction } from "mobx";
-import { autobind } from "./utils/autobind";
+import { autobind } from "./utils";
 import { userStore } from "../common/user-store";
 import logger from "../main/logger";
 
@@ -25,8 +25,8 @@ export class ThemeStore {
 
   // bundled themes from `themes/${themeId}.json`
   @observable themes: Theme[] = [
-    { id: "kontena-dark", type: ThemeType.DARK },
-    { id: "kontena-light", type: ThemeType.LIGHT },
+    { id: "lens-dark", type: ThemeType.DARK },
+    { id: "lens-light", type: ThemeType.LIGHT },
   ];
 
   @computed get activeThemeId() {
@@ -38,7 +38,7 @@ export class ThemeStore {
     return {
       colors: {},
       ...activeTheme,
-    }
+    };
   }
 
   constructor() {
@@ -48,11 +48,12 @@ export class ThemeStore {
         await this.loadTheme(themeId);
         this.applyTheme();
       } catch (err) {
+        logger.error(err);
         userStore.resetTheme();
       }
     }, {
       fireImmediately: true,
-    })
+    });
   }
 
   async init() {
@@ -63,7 +64,7 @@ export class ThemeStore {
   }
 
   getThemeById(themeId: ThemeId): Theme {
-    return this.themes.find(theme => theme.id === themeId)
+    return this.themes.find(theme => theme.id === themeId);
   }
 
   protected async loadTheme(themeId: ThemeId): Promise<Theme> {
@@ -79,18 +80,18 @@ export class ThemeStore {
       }
       return existingTheme;
     } catch (err) {
-      logger.error(`Can't load theme "${themeId}": ${err}`);
+      throw new Error(`Can't load theme "${themeId}": ${err}`);
     }
   }
 
   protected applyTheme(theme = this.activeTheme) {
     if (!this.styles) {
       this.styles = document.createElement("style");
-      this.styles.id = "lens-theme"
+      this.styles.id = "lens-theme";
       document.head.prepend(this.styles);
     }
     const cssVars = Object.entries(theme.colors).map(([cssName, color]) => {
-      return `--${cssName}: ${color} !important;`
+      return `--${cssName}: ${color};`;
     });
     this.styles.textContent = `:root {\n${cssVars.join("\n")}}`;
     // Adding universal theme flag which can be used in component styles

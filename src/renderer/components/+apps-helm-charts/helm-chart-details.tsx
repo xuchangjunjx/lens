@@ -3,7 +3,7 @@ import "./helm-chart-details.scss";
 import React, { Component } from "react";
 import { HelmChart, helmChartsApi } from "../../api/endpoints/helm-charts.api";
 import { t, Trans } from "@lingui/macro";
-import { observable, toJS } from "mobx";
+import { observable, autorun } from "mobx";
 import { observer } from "mobx-react";
 import { Drawer, DrawerItem } from "../drawer";
 import { autobind, stopPropagation } from "../../utils";
@@ -30,22 +30,22 @@ export class HelmChartDetails extends Component<Props> {
 
   private chartPromise: CancelablePromise<{ readme: string; versions: HelmChart[] }>;
 
-  async componentDidMount() {
-    const { chart: { name, repo, version } } = this.props
-
-    try {
-      const { readme, versions } = await (this.chartPromise = helmChartsApi.get(repo, name, version))
-      this.readme = readme
-      this.chartVersions = versions
-      this.selectedChart = versions[0]
-    } catch (error) {
-      this.error = error
-    }
-  }
-
   componentWillUnmount() {
     this.chartPromise?.cancel();
   }
+
+  chartUpdater = autorun(() => {
+    this.selectedChart = null;
+    const { chart: { name, repo, version } } = this.props;
+    helmChartsApi.get(repo, name, version).then(result => {
+      this.readme = result.readme;
+      this.chartVersions = result.versions;
+      this.selectedChart = result.versions[0];
+    },
+    error => {
+      this.error = error;
+    });
+  });
 
   @autobind()
   async onVersionChange({ value: version }: SelectOption) {
@@ -55,7 +55,7 @@ export class HelmChartDetails extends Component<Props> {
     try {
       this.chartPromise?.cancel();
       const { chart: { name, repo } } = this.props;
-      const { readme } = await (this.chartPromise = helmChartsApi.get(repo, name, version))
+      const { readme } = await (this.chartPromise = helmChartsApi.get(repo, name, version));
       this.readme = readme;
     } catch (error) {
       this.error = error;
@@ -65,7 +65,7 @@ export class HelmChartDetails extends Component<Props> {
   @autobind()
   install() {
     createInstallChartTab(this.selectedChart);
-    this.props.hideDetails()
+    this.props.hideDetails();
   }
 
   renderIntroduction() {
@@ -112,14 +112,14 @@ export class HelmChartDetails extends Component<Props> {
 
   renderReadme() {
     if (this.readme === null) {
-      return <Spinner center />
+      return <Spinner center />;
     }
 
     return (
       <div className="chart-description">
         <MarkdownViewer markdown={this.readme} />
       </div>
-    )
+    );
   }
 
   renderContent() {
@@ -132,7 +132,7 @@ export class HelmChartDetails extends Component<Props> {
         <div className="box grow">
           <p className="error">{this.error}</p>
         </div>
-      )
+      );
     }
 
     return (

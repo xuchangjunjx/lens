@@ -1,18 +1,18 @@
-import "./network-policy-details.scss"
+import "./network-policy-details.scss";
 
 import get from "lodash/get";
 import React, { Fragment } from "react";
 import { t, Trans } from "@lingui/macro";
 import { DrawerItem, DrawerTitle } from "../drawer";
-import { IPolicyEgress, IPolicyIngress, IPolicyIpBlock, IPolicySelector, NetworkPolicy, networkPolicyApi } from "../../api/endpoints/network-policy.api";
+import { IPolicyEgress, IPolicyIngress, IPolicyIpBlock, IPolicySelector, NetworkPolicy } from "../../api/endpoints/network-policy.api";
 import { Badge } from "../badge";
 import { SubTitle } from "../layout/sub-title";
 import { KubeEventDetails } from "../+events/kube-event-details";
 import { observer } from "mobx-react";
 import { KubeObjectDetailsProps } from "../kube-object";
 import { _i18n } from "../../i18n";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<NetworkPolicy> {
 }
@@ -27,10 +27,10 @@ export class NetworkPolicyDetails extends React.Component<Props> {
         <SubTitle title={<Trans>From</Trans>}/>
         {from.map(item =>
           Object.keys(item).map(key => {
-            const data = get(item, key)
+            const data = get(item, key);
             if (key === "ipBlock") {
               const { cidr, except } = data as IPolicyIpBlock;
-              if (!cidr) return
+              if (!cidr) return;
               return (
                 <DrawerItem name={key} key={key}>
                   cidr: {cidr}, {" "}
@@ -38,9 +38,9 @@ export class NetworkPolicyDetails extends React.Component<Props> {
                   `except: ${except.join(", ")}`
                   }
                 </DrawerItem>
-              )
+              );
             }
-            const selector: IPolicySelector = data
+            const selector: IPolicySelector = data;
             if (selector.matchLabels) {
               return (
                 <DrawerItem name={key} key={key}>
@@ -51,7 +51,7 @@ export class NetworkPolicyDetails extends React.Component<Props> {
                       .join(", ")
                   }
                 </DrawerItem>
-              )
+              );
             }
             else {
               return (<DrawerItem name={key} key={key}>(empty)</DrawerItem>);
@@ -69,10 +69,10 @@ export class NetworkPolicyDetails extends React.Component<Props> {
       <>
         <SubTitle title={<Trans>To</Trans>}/>
         {to.map(item => {
-          const { ipBlock } = item
-          if (!ipBlock) return
-          const { cidr, except } = ipBlock
-          if (!cidr) return
+          const { ipBlock } = item;
+          if (!ipBlock) return;
+          const { cidr, except } = ipBlock;
+          if (!cidr) return;
           return (
             <DrawerItem name="ipBlock" key={cidr}>
               cidr: {cidr}, {" "}
@@ -80,7 +80,7 @@ export class NetworkPolicyDetails extends React.Component<Props> {
               `except: ${except.join(", ")}`
               }
             </DrawerItem>
-          )
+          );
         })}
       </>
     );
@@ -116,7 +116,7 @@ export class NetworkPolicyDetails extends React.Component<Props> {
                   </DrawerItem>
                   {this.renderIngressFrom(ingress)}
                 </Fragment>
-              )
+              );
             })}
           </>
         )}
@@ -133,17 +133,28 @@ export class NetworkPolicyDetails extends React.Component<Props> {
                   </DrawerItem>
                   {this.renderEgressTo(egress)}
                 </Fragment>
-              )
+              );
             })}
           </>
         )}
-
-        <KubeEventDetails object={policy}/>
       </div>
     );
   }
 }
 
-apiManager.registerViews(networkPolicyApi, {
-  Details: NetworkPolicyDetails
-})
+kubeObjectDetailRegistry.add({
+  kind: "NetworkPolicy",
+  apiVersions: ["networking.k8s.io/v1"],
+  components: {
+    Details: (props) => <NetworkPolicyDetails {...props} />
+  }
+});
+
+kubeObjectDetailRegistry.add({
+  kind: "NetworkPolicy",
+  apiVersions: ["networking.k8s.io/v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});

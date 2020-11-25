@@ -59,14 +59,14 @@ export class ClusterPrometheusSetting extends React.Component<Props> {
       service: parsed[1],
       port: parseInt(parsed[2]),
       prefix: apiPrefix
-    }
-  }
+    };
+  };
 
   onSaveProvider = () => {
     this.props.cluster.preferences.prometheusProvider = this.provider ?
       { type: this.provider } :
       null;
-  }
+  };
 
   onSavePath = () => {
     this.props.cluster.preferences.prometheus = this.parsePrometheusPath();
@@ -90,7 +90,7 @@ export class ClusterPrometheusSetting extends React.Component<Props> {
           }}
           options={options}
         />
-        <span className="hint">What query format is used to fetch metrics from Prometheus</span>
+        <small className="hint">What query format is used to fetch metrics from Prometheus</small>
         {this.canEditPrometheusPath && (
           <>
             <p>Prometheus service address.</p>
@@ -101,10 +101,10 @@ export class ClusterPrometheusSetting extends React.Component<Props> {
               onBlur={this.onSavePath}
               placeholder="<namespace>/<service>:<port>"
             />
-            <span className="hint">
+            <small className="hint">
               An address to an existing Prometheus installation{" "}
               ({'<namespace>/<service>:<port>'}). Lens tries to auto-detect address if left empty.
-            </span>
+            </small>
           </>
         )}
       </>

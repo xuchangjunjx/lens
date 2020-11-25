@@ -1,16 +1,16 @@
-import "./badge.scss"
+import "./badge.scss";
 
 import React from "react";
 import { cssNames } from "../../utils/cssNames";
 import { TooltipDecoratorProps, withTooltip } from "../tooltip";
 
-interface Props extends React.HTMLAttributes<any>, TooltipDecoratorProps {
+export interface BadgeProps extends React.HTMLAttributes<any>, TooltipDecoratorProps {
   small?: boolean;
   label?: React.ReactNode;
 }
 
 @withTooltip
-export class Badge extends React.Component<Props> {
+export class Badge extends React.Component<BadgeProps> {
   render() {
     const { className, label, small, children, ...elemProps } = this.props;
     return <>
@@ -18,6 +18,6 @@ export class Badge extends React.Component<Props> {
         {label}
         {children}
       </span>
-    </>
+    </>;
   }
 }

@@ -9,13 +9,13 @@ import { DrawerItem, DrawerTitle } from "../drawer";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { secretsStore } from "../+config-secrets/secrets.store";
 import { Link } from "react-router-dom";
-import { Secret, ServiceAccount, serviceAccountsApi } from "../../api/endpoints";
+import { Secret, ServiceAccount } from "../../api/endpoints";
 import { KubeEventDetails } from "../+events/kube-event-details";
 import { getDetailsUrl } from "../../navigation";
 import { KubeObjectDetailsProps } from "../kube-object";
-import { apiManager } from "../../api/api-manager";
 import { KubeObjectMeta } from "../kube-object/kube-object-meta";
 import { Icon } from "../icon";
+import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 interface Props extends KubeObjectDetailsProps<ServiceAccount> {
 }
@@ -39,27 +39,27 @@ export class ServiceAccountsDetails extends React.Component<Props> {
     });
     this.secrets = await Promise.all(secrets);
     const imagePullSecrets = serviceAccount.getImagePullSecrets().map(async({ name }) => {
-      return secretsStore.load({ name, namespace }).catch(_err => { return this.generateDummySecretObject(name) });
+      return secretsStore.load({ name, namespace }).catch(_err => { return this.generateDummySecretObject(name); });
     });
-    this.imagePullSecrets = await Promise.all(imagePullSecrets)
-  })
+    this.imagePullSecrets = await Promise.all(imagePullSecrets);
+  });
 
   renderSecrets() {
     const { secrets } = this;
     if (!secrets) {
-      return <Spinner center/>
+      return <Spinner center/>;
     }
     return secrets.map(secret =>
       <ServiceAccountsSecret key={secret.getId()} secret={secret}/>
-    )
+    );
   }
 
   renderImagePullSecrets() {
     const { imagePullSecrets } = this;
     if (!imagePullSecrets) {
-      return <Spinner center/>
+      return <Spinner center/>;
     }
-    return this.renderSecretLinks(imagePullSecrets)
+    return this.renderSecretLinks(imagePullSecrets);
   }
 
   renderSecretLinks(secrets: Secret[]) {
@@ -73,14 +73,14 @@ export class ServiceAccountsDetails extends React.Component<Props> {
               tooltip={<Trans>Secret is not found</Trans>}
             />
           </div>
-        )
+        );
       }
       return (
         <Link key={secret.getId()} to={getDetailsUrl(secret.selfLink)}>
           {secret.getName()}
         </Link>
-      )
-    })
+      );
+    });
   }
 
   generateDummySecretObject(name: string) {
@@ -88,12 +88,12 @@ export class ServiceAccountsDetails extends React.Component<Props> {
       apiVersion: "v1",
       kind: "Secret",
       metadata: {
-        name: name,
+        name,
         uid: null,
         selfLink: null,
         resourceVersion: null
       }
-    })
+    });
   }
 
   render() {
@@ -104,8 +104,8 @@ export class ServiceAccountsDetails extends React.Component<Props> {
     const tokens = secretsStore.items.filter(secret =>
       secret.getNs() == serviceAccount.getNs() &&
       secret.getAnnotations().some(annot => annot == `kubernetes.io/service-account.name: ${serviceAccount.getName()}`)
-    )
-    const imagePullSecrets = serviceAccount.getImagePullSecrets()
+    );
+    const imagePullSecrets = serviceAccount.getImagePullSecrets();
     return (
       <div className="ServiceAccountsDetails">
         <KubeObjectMeta object={serviceAccount}/>
@@ -125,13 +125,23 @@ export class ServiceAccountsDetails extends React.Component<Props> {
         <div className="secrets">
           {this.renderSecrets()}
         </div>
-
-        <KubeEventDetails object={serviceAccount}/>
       </div>
-    )
+    );
   }
 }
 
-apiManager.registerViews(serviceAccountsApi, {
-  Details: ServiceAccountsDetails
-})
+kubeObjectDetailRegistry.add({
+  kind: "ServiceAccount",
+  apiVersions: ["v1"],
+  components: {
+    Details: (props) => <ServiceAccountsDetails {...props} />
+  }
+});
+kubeObjectDetailRegistry.add({
+  kind: "ServiceAccount",
+  apiVersions: ["v1"],
+  priority: 5,
+  components: {
+    Details: (props) => <KubeEventDetails {...props} />
+  }
+});
